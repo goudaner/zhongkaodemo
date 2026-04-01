@@ -161,10 +161,18 @@
       <label>理化实验操作（满20）</label>
       <input type="number" id="extra-score" placeholder="18" min="0" max="20" value="18" oninput="onScoreInput()">
     </div>
+    <div class="input-group">
+      <label>综合素质（满40）</label>
+      <input type="number" id="zszq-score" placeholder="30" min="0" max="40" value="30" oninput="onScoreInput()">
+    </div>
+    <div class="input-group">
+      <label>进步系数（预计比模考高多少分）</label>
+      <input type="number" id="improve-score" placeholder="10" min="-20" max="60" value="10" oninput="onScoreInput()">
+    </div>
   </div>
 
   <div class="calc-tip" id="calc-tip">
-    💡 深圳中考满分630分 = 文化课560（语120+数100+英100+理化120+历史70+政治50）+ 体育50 + 理化实验20<br>
+    💡 深圳中考满分630分 = 文化课560 + 体育50 + 理化实验20 + 综合素质40；进步系数反映模考→中考的进步空间<br>
     模考一般只考文化课部分，加上其余科目才是中考总分
   </div>
 
@@ -233,11 +241,13 @@ function onScoreInput() {
   if (!mock) return;
   const pe = parseInt(document.getElementById('pe-score').value) || 45;
   const extra = parseInt(document.getElementById('extra-score').value) || 18;
+  const zszq = parseInt(document.getElementById('zszq-score').value) || 30;
+  const improve = parseInt(document.getElementById('improve-score').value) || 10;
   const type = document.getElementById('score-type').value;
   const bonus = TYPE_BONUS[type] || 0;
-  const predict = mock + pe + extra + bonus;
+  const predict = mock + pe + extra + zszq + improve + bonus;
   document.getElementById('calc-tip').innerHTML =
-    `💡 预估中考分：<strong style="color:#1a73e8;font-size:16px">${predict}分</strong>（文化课${mock} + 体育${pe} + 实验素质${extra}${bonus >= 0 ? '+' : ''}${bonus}）<br>
+    `💡 预估中考分：<strong style="color:#1a73e8;font-size:16px">${predict}分</strong>（文化课${mock} + 体育${pe} + 实验${extra} + 素质${zszq} + 进步${improve >= 0 ? '+' : ''}${improve}${bonus !== 0 ? (bonus >= 0 ? '+' : '') + bonus : ''}）<br>
     <span style="color:#999">二模最接近中考难度，三模略偏易所以略加分</span>`;
 }
 
@@ -249,9 +259,11 @@ function doSearch() {
   }
   const pe = parseInt(document.getElementById('pe-score').value) || 45;
   const extra = parseInt(document.getElementById('extra-score').value) || 18;
+  const zszq = parseInt(document.getElementById('zszq-score').value) || 30;
+  const improve = parseInt(document.getElementById('improve-score').value) || 10;
   const type = document.getElementById('score-type').value;
   const bonus = TYPE_BONUS[type] || 0;
-  const predict = mock + pe + extra + bonus;
+  const predict = mock + pe + extra + zszq + improve + bonus;
 
   document.getElementById('predict-num').textContent = predict;
   document.getElementById('score-range').textContent =
