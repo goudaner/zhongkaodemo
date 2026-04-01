@@ -120,6 +120,42 @@
   .no-result { text-align: center; padding: 30px; color: #999; font-size: 14px; }
 
   .tips-text { font-size: 12px; color: #999; text-align: center; margin: 8px 0; line-height: 1.6; }
+
+  /* ===== Tab 导航 ===== */
+  .tab-bar {
+    display: flex; background: white;
+    border-bottom: 1px solid #e0e0e0;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .tab-btn {
+    flex: 1; padding: 12px 4px; font-size: 13px; color: #888;
+    border: none; background: none; cursor: pointer;
+    border-bottom: 3px solid transparent; transition: all 0.2s;
+  }
+  .tab-btn.active { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: 600; }
+  .tab-page { display: none; }
+  .tab-page.active { display: block; }
+
+  /* ===== 走读页 ===== */
+  .district-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+  .district-btn {
+    padding: 10px 4px; border: 1.5px solid #e0e0e0; border-radius: 8px;
+    background: white; font-size: 13px; cursor: pointer; text-align: center; transition: all 0.2s;
+  }
+  .district-btn.active { border-color: #1a73e8; background: #e8f0fe; color: #1a73e8; font-weight: 600; }
+  .nearby-tip { font-size: 12px; color: #999; margin-bottom: 8px; }
+
+  /* ===== 特长生页 ===== */
+  .talent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .talent-btn {
+    padding: 14px 8px; border: 1.5px solid #e0e0e0; border-radius: 10px;
+    background: white; font-size: 14px; cursor: pointer; text-align: center; transition: all 0.2s;
+  }
+  .talent-btn.active { border-color: #1a73e8; background: #e8f0fe; color: #1a73e8; font-weight: 600; }
+  .talent-tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin: 2px; }
+  .tag-art { background: #fce4ec; color: #c62828; }
+  .tag-sport { background: #e8f5e9; color: #2e7d32; }
+
 </style>
 
 </head>
@@ -202,6 +238,47 @@
   </div>
 
   <p class="tips-text">⚠️ 以上为参考，实际录取以官方为准<br>点击学校可查看详情</p>
+</div>
+
+</div><!-- end tab-match -->
+
+<!-- 页面2：走读推荐 -->
+<div class="tab-page" id="tab-walk">
+  <div class="card">
+    <h2>🚶 走读学校推荐</h2>
+    <p class="nearby-tip">选择你的居住区，优先推荐同区及相邻区的学校</p>
+    <div class="district-grid">
+      <button class="district-btn" onclick="selectDistrict('福田')">福田</button>
+      <button class="district-btn" onclick="selectDistrict('南山')">南山</button>
+      <button class="district-btn" onclick="selectDistrict('罗湖')">罗湖</button>
+      <button class="district-btn" onclick="selectDistrict('宝安')">宝安</button>
+      <button class="district-btn" onclick="selectDistrict('龙华')">龙华</button>
+      <button class="district-btn" onclick="selectDistrict('龙岗')">龙岗</button>
+      <button class="district-btn" onclick="selectDistrict('光明')">光明</button>
+      <button class="district-btn" onclick="selectDistrict('坪山')">坪山</button>
+      <button class="district-btn" onclick="selectDistrict('盐田')">盐田</button>
+    </div>
+    <div class="input-group" style="margin-bottom:12px">
+      <label>预估中考分（可选，留空显示所有）</label>
+      <input type="number" id="walk-score" placeholder="例如：550" min="400" max="630" oninput="renderWalk()">
+    </div>
+    <div id="walk-result"></div>
+    <p class="tips-text" style="margin:8px 12px">⚠️ 走读需结合实际通勤距离判断，后续版本将加入精准定位</p>
+  </div>
+</div>
+
+<!-- 页面3：特长生 -->
+<div class="tab-page" id="tab-talent">
+  <div class="card">
+    <h2>⭐ 特长生学校参考</h2>
+    <p class="nearby-tip">当前支持美术和体育，其他特长方向后续增加</p>
+    <div class="talent-grid">
+      <button class="talent-btn active" id="tbtn-art" onclick="selectTalent('art')">🎨 美术生</button>
+      <button class="talent-btn" id="tbtn-sport" onclick="selectTalent('sport')">⚽ 体育生</button>
+    </div>
+    <div id="talent-result"></div>
+    <p class="tips-text" style="margin:8px 12px">⚠️ 特长生招生政策每年可能调整，以官方公告为准</p>
+  </div>
 </div>
 
 <!-- 学校详情 Modal -->
@@ -332,6 +409,143 @@ function closeModal(e) {
 function closeModalDirect() {
   document.getElementById('modal').classList.remove('show');
 }
+
+// ===== Tab 切换 =====
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', ['match','walk','talent'][i] === name);
+  });
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'walk') renderWalk();
+  if (name === 'talent') renderTalent();
+}
+
+// ===== 走读页 =====
+// 相邻区映射
+const ADJACENT = {
+  '福田': ['南山','罗湖','龙华'],
+  '南山': ['福田','宝安','光明'],
+  '罗湖': ['福田','龙华','盐田'],
+  '宝安': ['南山','光明','龙华'],
+  '龙华': ['福田','罗湖','龙岗','宝安'],
+  '龙岗': ['龙华','坪山','盐田'],
+  '光明': ['南山','宝安'],
+  '坪山': ['龙岗'],
+  '盐田': ['罗湖','龙岗'],
+};
+let walkDistrict = '';
+
+function selectDistrict(d) {
+  walkDistrict = d;
+  document.querySelectorAll('.district-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === d);
+  });
+  renderWalk();
+}
+
+function renderWalk() {
+  if (!walkDistrict) {
+    document.getElementById('walk-result').innerHTML = '<div class="no-result">请先选择居住区</div>';
+    return;
+  }
+  const scoreEl = document.getElementById('walk-score');
+  const filterScore = parseInt(scoreEl.value) || 0;
+  const adjacent = ADJACENT[walkDistrict] || [];
+
+  const same = [], near = [];
+  SCHOOLS.forEach(s => {
+    if (filterScore && (s.score_ac < filterScore - 50 || s.score_ac > filterScore + 20)) return;
+    if (s.district === walkDistrict) same.push({...s, walkTag: '同区'});
+    else if (adjacent.some(a => s.district.includes(a) || s.district === a)) near.push({...s, walkTag: '邻区'});
+  });
+
+  same.sort((a,b) => b.score_ac - a.score_ac);
+  near.sort((a,b) => b.score_ac - a.score_ac);
+
+  let html = '';
+  if (same.length) {
+    html += `<div style="font-size:13px;font-weight:600;color:#1a73e8;margin:8px 0 4px">📍 ${walkDistrict}区（${same.length}所）</div>`;
+    html += same.map(s => walkItem(s)).join('');
+  }
+  if (near.length) {
+    html += `<div style="font-size:13px;font-weight:600;color:#43a047;margin:12px 0 4px">🔄 相邻区（${near.length}所）</div>`;
+    html += near.slice(0,8).map(s => walkItem(s)).join('');
+  }
+  if (!same.length && !near.length) html = '<div class="no-result">暂无符合条件的学校</div>';
+  document.getElementById('walk-result').innerHTML = html;
+}
+
+function walkItem(s) {
+  return `<div class="school-item" onclick="showDetail(0, '${escape(JSON.stringify(s))}')">
+    <div class="school-top">
+      <span class="school-name">${s.name}</span>
+      <span class="school-score">${s.score_ac}分</span>
+    </div>
+    <div class="school-tags">
+      <span class="tag ${s.walkTag === '同区' ? 'district' : ''}" style="${s.walkTag==='邻区'?'background:#e8f5e9;color:#2e7d32':''}">${s.walkTag}</span>
+      <span class="tag district">${s.district}</span>
+      <span class="tag grade-${s.grade.substring(0,2)}">${s.grade}</span>
+    </div>
+  </div>`;
+}
+
+// ===== 特长生页 =====
+// 美术：名字/特色含美术关键词的学校
+const ART_KEYWORDS = ['美术','艺术','艺','美'];
+// 体育：名字/特色含体育关键词的学校
+const SPORT_KEYWORDS = ['体育','足球','篮球','运动'];
+// 已知特长校补充标注
+const TALENT_EXTRA = {
+  '深美-必选美术-必选历史': { art: true, note: '专业美术高中，必选美术+历史' },
+  '深二实': { art: true, note: '艺术体育成绩好' },
+  '光明中学': { art: true, note: '音美学生选历史，日语班' },
+  '深艺高，可正常文化高考': { art: true, sport: true, note: '艺术类高中，可正常高考' },
+  '深二高级': { art: true, sport: true, note: '文化、艺体、航空全面开花' },
+  '科高龙岗-坪地新生': { sport: true, note: '原足球学校' },
+};
+
+let talentType = 'art';
+function selectTalent(t) {
+  talentType = t;
+  document.getElementById('tbtn-art').classList.toggle('active', t === 'art');
+  document.getElementById('tbtn-sport').classList.toggle('active', t === 'sport');
+  renderTalent();
+}
+
+function renderTalent() {
+  const keywords = talentType === 'art' ? ART_KEYWORDS : SPORT_KEYWORDS;
+  const results = SCHOOLS.filter(s => {
+    const extra = TALENT_EXTRA[s.name];
+    if (extra && extra[talentType]) return true;
+    const text = (s.name + s.feature).toLowerCase();
+    return keywords.some(k => text.includes(k));
+  });
+
+  if (!results.length) {
+    document.getElementById('talent-result').innerHTML = '<div class="no-result">暂无数据</div>';
+    return;
+  }
+
+  document.getElementById('talent-result').innerHTML = results.map(s => {
+    const extra = TALENT_EXTRA[s.name];
+    const tagClass = talentType === 'art' ? 'tag-art' : 'tag-sport';
+    const tagText = talentType === 'art' ? '🎨 美术' : '⚽ 体育';
+    return `<div class="school-item" onclick="showDetail(0, '${escape(JSON.stringify(s))}')">
+      <div class="school-top">
+        <span class="school-name">${s.name}</span>
+        <span class="school-score">${s.score_ac}分</span>
+      </div>
+      <div class="school-tags">
+        <span class="talent-tag ${tagClass}">${tagText}</span>
+        <span class="tag district">${s.district}</span>
+        <span class="tag grade-${s.grade.substring(0,2)}">${s.grade}</span>
+      </div>
+      ${extra && extra.note ? `<div style="font-size:11px;color:#888;margin-top:4px;padding:0 2px">💡 ${extra.note}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
 </script>
 
 </body>
