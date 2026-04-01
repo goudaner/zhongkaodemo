@@ -155,16 +155,16 @@
     </div>
     <div class="input-group">
       <label>体育分（满70）</label>
-      <input type="number" id="pe-score" placeholder="62" min="0" max="70" value="62" oninput="onScoreInput()">
+      <input type="number" id="pe-score" placeholder="60" min="0" max="70" value="60" oninput="onScoreInput()">
     </div>
     <div class="input-group">
-      <label>实验+综合素质</label>
-      <input type="number" id="extra-score" placeholder="63" min="0" max="70" value="63" oninput="onScoreInput()">
+      <label>实验+综合素质（满20）</label>
+      <input type="number" id="extra-score" placeholder="18" min="0" max="20" value="18" oninput="onScoreInput()">
     </div>
   </div>
 
   <div class="calc-tip" id="calc-tip">
-    💡 深圳中考满分680分 = 文化课540 + 体育70 + 实验30 + 综合素质40<br>
+    💡 深圳中考满分630分 = 文化课540 + 体育70 + 实验+综合素质20<br>
     模考一般只考文化课部分，加上其余科目才是中考总分
   </div>
 
@@ -231,8 +231,8 @@ const TYPE_BONUS = { qimo: -5, yi: -5, er: 0, san: 5 };
 function onScoreInput() {
   const mock = parseInt(document.getElementById('mock-score').value) || 0;
   if (!mock) return;
-  const pe = parseInt(document.getElementById('pe-score').value) || 62;
-  const extra = parseInt(document.getElementById('extra-score').value) || 63;
+  const pe = parseInt(document.getElementById('pe-score').value) || 60;
+  const extra = parseInt(document.getElementById('extra-score').value) || 18;
   const type = document.getElementById('score-type').value;
   const bonus = TYPE_BONUS[type] || 0;
   const predict = mock + pe + extra + bonus;
@@ -247,8 +247,8 @@ function doSearch() {
     alert('请输入有效的模考分数（100-540分）');
     return;
   }
-  const pe = parseInt(document.getElementById('pe-score').value) || 62;
-  const extra = parseInt(document.getElementById('extra-score').value) || 63;
+  const pe = parseInt(document.getElementById('pe-score').value) || 60;
+  const extra = parseInt(document.getElementById('extra-score').value) || 18;
   const type = document.getElementById('score-type').value;
   const bonus = TYPE_BONUS[type] || 0;
   const predict = mock + pe + extra + bonus;
