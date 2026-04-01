@@ -154,17 +154,17 @@
       </select>
     </div>
     <div class="input-group">
-      <label>体育分（满70）</label>
-      <input type="number" id="pe-score" placeholder="60" min="0" max="70" value="60" oninput="onScoreInput()">
+      <label>体育分（满50）</label>
+      <input type="number" id="pe-score" placeholder="45" min="0" max="50" value="45" oninput="onScoreInput()">
     </div>
     <div class="input-group">
-      <label>实验+综合素质（满20）</label>
+      <label>理化实验操作（满20）</label>
       <input type="number" id="extra-score" placeholder="18" min="0" max="20" value="18" oninput="onScoreInput()">
     </div>
   </div>
 
   <div class="calc-tip" id="calc-tip">
-    💡 深圳中考满分630分 = 文化课540 + 体育70 + 实验+综合素质20<br>
+    💡 深圳中考满分630分 = 文化课560（语120+数100+英100+理化120+历史70+政治50）+ 体育50 + 理化实验20<br>
     模考一般只考文化课部分，加上其余科目才是中考总分
   </div>
 
@@ -231,7 +231,7 @@ const TYPE_BONUS = { qimo: -5, yi: -5, er: 0, san: 5 };
 function onScoreInput() {
   const mock = parseInt(document.getElementById('mock-score').value) || 0;
   if (!mock) return;
-  const pe = parseInt(document.getElementById('pe-score').value) || 60;
+  const pe = parseInt(document.getElementById('pe-score').value) || 45;
   const extra = parseInt(document.getElementById('extra-score').value) || 18;
   const type = document.getElementById('score-type').value;
   const bonus = TYPE_BONUS[type] || 0;
@@ -244,10 +244,10 @@ function onScoreInput() {
 function doSearch() {
   const mock = parseInt(document.getElementById('mock-score').value);
   if (!mock || mock < 100) {
-    alert('请输入有效的模考分数（100-540分）');
+    alert('请输入有效的模考文化课分数（100-560分）');
     return;
   }
-  const pe = parseInt(document.getElementById('pe-score').value) || 60;
+  const pe = parseInt(document.getElementById('pe-score').value) || 45;
   const extra = parseInt(document.getElementById('extra-score').value) || 18;
   const type = document.getElementById('score-type').value;
   const bonus = TYPE_BONUS[type] || 0;
