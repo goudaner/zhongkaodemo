@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>资产盘点工具</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif; background: #f5f5f5; color: #333; }
+
+  .header {
+    background: #1677ff; color: #fff; padding: 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header .count { font-size: 13px; opacity: .85; }
+
+  .floor-bar {
+    background: #fff; padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid #eee;
+  }
+  .floor-bar label { font-size: 14px; color: #666; white-space: nowrap; }
+  .floor-bar select {
+    flex: 1; border: 1px solid #d9d9d9; border-radius: 6px;
+    padding: 6px 10px; font-size: 15px; background: #fff;
+  }
+
+  .list { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+
+  .card {
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    overflow: hidden;
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; background: #fafafa; border-bottom: 1px solid #f0f0f0;
+  }
+  .card-seq { font-size: 13px; color: #999; }
+  .card-del { color: #ff4d4f; font-size: 13px; cursor: pointer; padding: 2px 6px; }
+
+  .photo-area {
+    position: relative; cursor: pointer;
+    background: #f9f9f9; display: flex; align-items: center; justify-content: center;
+    height: 140px; overflow: hidden;
+  }
+  .photo-area img { width: 100%; height: 140px; object-fit: cover; display: block; }
+  .photo-placeholder {
+    display: flex; flex-direction: column; align-items: center; gap: 6px; color: #bbb;
+  }
+  .photo-placeholder svg { width: 40px; height: 40px; }
+  .photo-placeholder span { font-size: 13px; }
+  .photo-input { display: none; }
+
+  .fields { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .field-row { display: flex; align-items: center; gap: 8px; }
+  .field-label { font-size: 13px; color: #666; width: 58px; flex-shrink: 0; }
+  .field-input {
+    flex: 1; border: 1px solid #d9d9d9; border-radius: 6px;
+    padding: 7px 10px; font-size: 14px; outline: none;
+    transition: border-color .2s;
+  }
+  .field-input:focus { border-color: #1677ff; }
+  .field-row.qty-row .field-input { width: 80px; flex: 0 0 80px; }
+  .unit-select {
+    border: 1px solid #d9d9d9; border-radius: 6px;
+    padding: 7px 8px; font-size: 14px; background: #fff; outline: none;
+  }
+
+  .status-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .status-btn {
+    padding: 5px 14px; border-radius: 20px; font-size: 13px;
+    border: 1px solid #d9d9d9; background: #fff; cursor: pointer;
+    transition: all .15s;
+  }
+  .status-btn.ok.active   { background: #f6ffed; border-color: #52c41a; color: #52c41a; }
+  .status-btn.nok.active  { background: #fff2f0; border-color: #ff4d4f; color: #ff4d4f; }
+  .status-btn.unk.active  { background: #fffbe6; border-color: #faad14; color: #faad14; }
+
+  .add-btn {
+    margin: 0 12px 12px;
+    width: calc(100% - 24px);
+    padding: 13px; border-radius: 10px;
+    background: #e6f4ff; color: #1677ff;
+    font-size: 15px; font-weight: 500;
+    border: 1.5px dashed #91caff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+
+  .bottom-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #fff; padding: 12px 16px;
+    border-top: 1px solid #eee;
+    display: flex; gap: 10px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+  .btn-export {
+    flex: 1; padding: 13px; border-radius: 10px;
+    background: #1677ff; color: #fff;
+    font-size: 15px; font-weight: 600; border: none; cursor: pointer;
+  }
+  .btn-export:active { opacity: .85; }
+  .spacer { height: 80px; }
+
+  .toast {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    background: rgba(0,0,0,.7); color: #fff;
+    padding: 10px 20px; border-radius: 8px; font-size: 14px;
+    opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 999;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📦 资产盘点</h1>
+  <span class="count" id="totalCount">已录 0 条</span>
+</div>
+
+<div class="floor-bar">
+  <label>当前楼层</label>
+  <select id="globalFloor">
+    <option value="9楼">9楼</option>
+    <option value="10楼">10楼</option>
+    <option value="其他">其他</option>
+  </select>
+</div>
+
+<div class="list" id="itemList"></div>
+
+<button class="add-btn" onclick="addItem()">＋ 添加一条记录</button>
+
+<div class="spacer"></div>
+
+<div class="bottom-bar">
+  <button class="btn-export" onclick="exportExcel()">📥 导出 Excel</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- SheetJS -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+<script>
+let items = [];
+let idCounter = 0;
+
+function addItem() {
+  const id = ++idCounter;
+  const floor = document.getElementById('globalFloor').value;
+  items.push({ id, name:'', qty:'', unit:'个', status:'', reason:'', imgData:null, floor });
+  renderList();
+  // 滚到新卡片
+  setTimeout(() => {
+    const cards = document.querySelectorAll('.card');
+    if (cards.length) cards[cards.length-1].scrollIntoView({behavior:'smooth', block:'center'});
+  }, 100);
+}
+
+function deleteItem(id) {
+  items = items.filter(i => i.id !== id);
+  renderList();
+}
+
+function updateField(id, field, value) {
+  const item = items.find(i => i.id === id);
+  if (item) item[field] = value;
+  updateCount();
+}
+
+function setStatus(id, status) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  item.status = status;
+  // 更新按钮样式
+  const card = document.querySelector(`[data-id="${id}"]`);
+  if (!card) return;
+  card.querySelectorAll('.status-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.val === status);
+  });
+}
+
+function triggerPhoto(id) {
+  document.getElementById(`photo-input-${id}`).click();
+}
+
+function handlePhoto(id, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const item = items.find(i => i.id === id);
+    if (item) item.imgData = e.target.result;
+    const card = document.querySelector(`[data-id="${id}"]`);
+    if (!card) return;
+    const area = card.querySelector('.photo-area');
+    area.innerHTML = `<img src="${e.target.result}" onclick="triggerPhoto(${id})">
+      <input type="file" id="photo-input-${id}" class="photo-input" accept="image/*" capture="environment" onchange="handlePhoto(${id}, this)">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateCount() {
+  document.getElementById('totalCount').textContent = `已录 ${items.length} 条`;
+}
+
+function renderList() {
+  updateCount();
+  const list = document.getElementById('itemList');
+  list.innerHTML = items.map((item, idx) => `
+    <div class="card" data-id="${item.id}">
+      <div class="card-header">
+        <span class="card-seq">第 ${idx+1} 条 · ${item.floor}</span>
+        <span class="card-del" onclick="deleteItem(${item.id})">删除</span>
+      </div>
+      <div class="photo-area" onclick="triggerPhoto(${item.id})">
+        ${item.imgData
+          ? `<img src="${item.imgData}">`
+          : `<div class="photo-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                <circle cx="12" cy="13" r="3"/>
+              </svg>
+              <span>点击拍照</span>
+            </div>`
+        }
+        <input type="file" id="photo-input-${item.id}" class="photo-input" accept="image/*" capture="environment" onchange="handlePhoto(${item.id}, this)">
+      </div>
+      <div class="fields">
+        <div class="field-row">
+          <span class="field-label">物品名称</span>
+          <input class="field-input" type="text" placeholder="请输入物品名称"
+            value="${escHtml(item.name)}"
+            onchange="updateField(${item.id},'name',this.value)"
+            oninput="updateField(${item.id},'name',this.value)">
+        </div>
+        <div class="field-row qty-row">
+          <span class="field-label">数量</span>
+          <input class="field-input" type="number" placeholder="0" min="0"
+            value="${item.qty}"
+            onchange="updateField(${item.id},'qty',this.value)"
+            oninput="updateField(${item.id},'qty',this.value)">
+          <select class="unit-select" onchange="updateField(${item.id},'unit',this.value)">
+            ${['个','把','张','块','箱','台','批','套','件','根'].map(u =>
+              `<option value="${u}" ${item.unit===u?'selected':''}>${u}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="field-row">
+          <span class="field-label">可用状态</span>
+          <div class="status-row">
+            <button class="status-btn ok ${item.status==='可用'?'active':''}" data-val="可用" onclick="setStatus(${item.id},'可用')">可用</button>
+            <button class="status-btn nok ${item.status==='不可用'?'active':''}" data-val="不可用" onclick="setStatus(${item.id},'不可用')">不可用</button>
+            <button class="status-btn unk ${item.status==='待核实'?'active':''}" data-val="待核实" onclick="setStatus(${item.id},'待核实')">待核实</button>
+          </div>
+        </div>
+        <div class="field-row">
+          <span class="field-label">报废原因</span>
+          <input class="field-input" type="text" placeholder="可不填"
+            value="${escHtml(item.reason)}"
+            onchange="updateField(${item.id},'reason',this.value)"
+            oninput="updateField(${item.id},'reason',this.value)">
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function escHtml(str) {
+  return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+async function exportExcel() {
+  if (!items.length) { showToast('还没有记录'); return; }
+
+  showToast('正在生成Excel…');
+
+  const headers = ['序号','物品','数量','单位','图片','楼宇','报废原因','资产编码','资产原值','资产净值','主体','备注'];
+  const wb = XLSX.utils.book_new();
+  const wsData = [headers];
+
+  items.forEach((item, idx) => {
+    wsData.push([
+      idx+1,
+      item.name,
+      item.qty ? Number(item.qty) : '',
+      item.unit,
+      item.imgData ? '[见图片]' : '',
+      item.floor,
+      item.reason,
+      '', '', '', '',
+      item.status || '待核实'
+    ]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // 列宽
+  ws['!cols'] = [
+    {wch:5},{wch:22},{wch:7},{wch:6},{wch:12},{wch:8},
+    {wch:16},{wch:10},{wch:10},{wch:10},{wch:10},{wch:14}
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, '资产盘点');
+
+  const date = new Date();
+  const ds = `${date.getFullYear()}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(wb, `资产盘点_${ds}.xlsx`);
+
+  showToast(`已导出 ${items.length} 条记录`);
+}
+
+// 初始加一条
+addItem();
+</script>
+</body>
+</html>
