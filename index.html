@@ -121,6 +121,7 @@
 
   .tips-text { font-size: 12px; color: #999; text-align: center; margin: 8px 0; line-height: 1.6; }
 </style>
+
 </head>
 <body>
 
@@ -171,7 +172,7 @@
 </div>
 
 <!-- 预测分数展示 -->
-<div class="card" id="result-card" style="display:none">
+<div class="card" id="result-card" style="margin-top:12px">
   <h2>🎯 预测结果</h2>
   <div class="predict-score">
     <div class="num" id="predict-num">--</div>
@@ -274,8 +275,7 @@ function doSearch() {
   renderList('list-wen', wen);
   renderList('list-bao', bao);
 
-  document.getElementById('result-card').style.display = 'block';
-  document.getElementById('result-card').scrollIntoView({ behavior: 'smooth' });
+  window.scrollTo({top: document.getElementById('result-card').offsetTop - 10, behavior: 'smooth'});
 }
 
 function renderList(id, items) {
