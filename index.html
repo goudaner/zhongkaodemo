@@ -167,8 +167,8 @@
 <!-- Tab 导航栏 -->
 <div class="tab-bar">
   <button class="tab-btn active" onclick="switchTab('match')">🔍 志愿匹配</button>
-  <button class="tab-btn" onclick="switchTab('walk')">🚶 走读推荐</button>
-  <button class="tab-btn" onclick="switchTab('talent')">⭐ 特长生</button>
+  <button class="tab-btn" onclick="switchTab('walk')">🚶 走读匹配</button>
+  <button class="tab-btn" onclick="switchTab('talent')">⭐ 特长匹配</button>
 </div>
 
 <div id="tab-match" class="tab-page active">
@@ -253,11 +253,15 @@
 
 </div><!-- end tab-match -->
 
-<!-- 页面2：走读推荐 -->
+<!-- 页面2：走读匹配 -->
 <div class="tab-page" id="tab-walk">
   <div class="card">
-    <h2>🚶 走读学校推荐</h2>
+    <h2>🚶 走读学校匹配</h2>
     <p class="nearby-tip">选择你的居住区，优先推荐同区及相邻区的学校</p>
+    <div class="hukou-row" style="margin-bottom:12px">
+      <button class="hukou-btn active" onclick="setWalkHukou('ac')" id="wbtn-ac">🏠 深户 (A类)</button>
+      <button class="hukou-btn" onclick="setWalkHukou('d')" id="wbtn-d">📋 非深户 (D类)</button>
+    </div>
     <div class="district-grid">
       <button class="district-btn" onclick="selectDistrict('福田')">福田</button>
       <button class="district-btn" onclick="selectDistrict('南山')">南山</button>
@@ -278,10 +282,10 @@
   </div>
 </div>
 
-<!-- 页面3：特长生 -->
+<!-- 页面3：特长匹配 -->
 <div class="tab-page" id="tab-talent">
   <div class="card">
-    <h2>⭐ 特长生学校参考</h2>
+    <h2>⭐ 特长生匹配</h2>
     <p class="nearby-tip">当前支持美术和体育，其他特长方向后续增加</p>
     <div class="talent-grid">
       <button class="talent-btn active" id="tbtn-art" onclick="selectTalent('art')">🎨 美术生</button>
@@ -446,6 +450,22 @@ const ADJACENT = {
   '盐田': ['罗湖','龙岗'],
 };
 let walkDistrict = '';
+let walkHukou = 'ac';
+
+function setWalkHukou(type) {
+  walkHukou = type;
+  document.getElementById('wbtn-ac').classList.toggle('active', type === 'ac');
+  document.getElementById('wbtn-d').classList.toggle('active', type === 'd');
+  renderWalk();
+}
+
+function getWalkScore(s) {
+  if (walkHukou === 'ac') {
+    return s.score_ac_walk != null ? s.score_ac_walk : s.score_ac;
+  } else {
+    return s.score_d_walk != null ? s.score_d_walk : s.score_d;
+  }
+}
 
 function selectDistrict(d) {
   walkDistrict = d;
@@ -466,13 +486,14 @@ function renderWalk() {
 
   const same = [], near = [];
   SCHOOLS.forEach(s => {
-    if (filterScore && (s.score_ac < filterScore - 50 || s.score_ac > filterScore + 20)) return;
-    if (s.district === walkDistrict) same.push({...s, walkTag: '同区'});
-    else if (adjacent.some(a => s.district.includes(a) || s.district === a)) near.push({...s, walkTag: '邻区'});
+    const ws = getWalkScore(s);
+    if (filterScore && (ws < filterScore - 50 || ws > filterScore + 20)) return;
+    if (s.district === walkDistrict) same.push({...s, walkTag: '同区', _walkScore: ws});
+    else if (adjacent.some(a => s.district.includes(a) || s.district === a)) near.push({...s, walkTag: '邻区', _walkScore: ws});
   });
 
-  same.sort((a,b) => b.score_ac - a.score_ac);
-  near.sort((a,b) => b.score_ac - a.score_ac);
+  same.sort((a,b) => b._walkScore - a._walkScore);
+  near.sort((a,b) => b._walkScore - a._walkScore);
 
   let html = '';
   if (same.length) {
@@ -488,10 +509,13 @@ function renderWalk() {
 }
 
 function walkItem(s) {
+  const ws = s._walkScore;
+  const isWalkScore = walkHukou === 'ac' ? s.score_ac_walk != null : s.score_d_walk != null;
+  const scoreLabel = isWalkScore ? `${ws}分（走读线）` : `${ws}分`;
   return `<div class="school-item" onclick="showDetail(0, '${escape(JSON.stringify(s))}')">
     <div class="school-top">
       <span class="school-name">${s.name}</span>
-      <span class="school-score">${s.score_ac}分</span>
+      <span class="school-score">${scoreLabel}</span>
     </div>
     <div class="school-tags">
       <span class="tag ${s.walkTag === '同区' ? 'district' : ''}" style="${s.walkTag==='邻区'?'background:#e8f5e9;color:#2e7d32':''}">${s.walkTag}</span>
