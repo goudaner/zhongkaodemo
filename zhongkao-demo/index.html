@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>深圳中考志愿参考</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif; background: #f5f6fa; color: #333; }
+
+  .header {
+    background: linear-gradient(135deg, #1a73e8, #0d47a1);
+    color: white; padding: 20px 16px 16px;
+    text-align: center;
+  }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header p { font-size: 12px; opacity: 0.85; margin-top: 4px; }
+
+  .card {
+    background: white; border-radius: 12px; margin: 12px;
+    padding: 16px; box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  }
+  .card h2 { font-size: 15px; color: #1a73e8; margin-bottom: 12px; font-weight: 600; }
+
+  .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .input-group label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; }
+  .input-group input, .input-group select {
+    width: 100%; padding: 10px 12px; border: 1.5px solid #e0e0e0;
+    border-radius: 8px; font-size: 15px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-group input:focus, .input-group select:focus { border-color: #1a73e8; }
+
+  .hukou-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .hukou-btn {
+    flex: 1; padding: 10px; border: 1.5px solid #e0e0e0;
+    border-radius: 8px; background: white; font-size: 14px;
+    cursor: pointer; transition: all 0.2s; text-align: center;
+  }
+  .hukou-btn.active { border-color: #1a73e8; background: #e8f0fe; color: #1a73e8; font-weight: 600; }
+
+  .calc-tip {
+    background: #fff8e1; border-radius: 8px; padding: 10px 12px;
+    font-size: 12px; color: #795548; margin-top: 10px; line-height: 1.6;
+  }
+  .calc-tip strong { color: #e65100; }
+
+  .predict-score {
+    text-align: center; padding: 12px;
+    background: linear-gradient(135deg, #e8f0fe, #f3e5f5);
+    border-radius: 10px; margin-bottom: 10px;
+  }
+  .predict-score .num { font-size: 42px; font-weight: 700; color: #1a73e8; line-height: 1.1; }
+  .predict-score .label { font-size: 12px; color: #666; margin-top: 2px; }
+  .score-range { font-size: 12px; color: #888; margin-top: 4px; }
+
+  .btn-primary {
+    width: 100%; padding: 14px; background: #1a73e8; color: white;
+    border: none; border-radius: 10px; font-size: 16px; font-weight: 600;
+    cursor: pointer; margin-top: 12px; transition: background 0.2s;
+  }
+  .btn-primary:active { background: #1558b0; }
+
+  .tier { margin-bottom: 8px; }
+  .tier-header {
+    display: flex; align-items: center; padding: 8px 12px;
+    border-radius: 8px 8px 0 0; font-size: 13px; font-weight: 600;
+  }
+  .tier-chong .tier-header { background: #fce4ec; color: #c62828; }
+  .tier-wen .tier-header  { background: #e8f5e9; color: #2e7d32; }
+  .tier-bao .tier-header  { background: #e3f2fd; color: #1565c0; }
+
+  .tier-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 11px; margin-right: 8px;
+  }
+  .tier-chong .tier-badge { background: #c62828; color: white; }
+  .tier-wen .tier-badge   { background: #2e7d32; color: white; }
+  .tier-bao .tier-badge   { background: #1565c0; color: white; }
+
+  .school-list { border: 1px solid #eee; border-top: none; border-radius: 0 0 8px 8px; overflow: hidden; }
+  .school-item {
+    padding: 10px 12px; border-bottom: 1px solid #f5f5f5;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .school-item:last-child { border-bottom: none; }
+  .school-item:active { background: #f5f5f5; }
+  .school-top { display: flex; justify-content: space-between; align-items: center; }
+  .school-name { font-size: 14px; font-weight: 500; }
+  .school-score { font-size: 15px; font-weight: 700; color: #1a73e8; }
+  .school-diff { font-size: 11px; color: #999; }
+  .school-tags { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .tag {
+    font-size: 11px; padding: 1px 6px; border-radius: 4px;
+    background: #f0f0f0; color: #666;
+  }
+  .tag.district { background: #e8f0fe; color: #1a73e8; }
+  .tag.grade-A\\+ { background: #fce4ec; color: #c62828; }
+  .tag.grade-A头 { background: #fff3e0; color: #e65100; }
+  .tag.grade-A中 { background: #e8f5e9; color: #2e7d32; }
+  .tag.grade-A底 { background: #e3f2fd; color: #1565c0; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 100; align-items: flex-end;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: white; width: 100%; border-radius: 16px 16px 0 0;
+    padding: 20px 16px 32px; max-height: 80vh; overflow-y: auto;
+  }
+  .modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 12px; }
+  .modal-close { float: right; font-size: 20px; cursor: pointer; color: #999; margin-top: -4px; }
+  .detail-row { display: flex; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-label { color: #888; width: 80px; flex-shrink: 0; }
+  .detail-value { color: #333; flex: 1; }
+
+  .no-result { text-align: center; padding: 30px; color: #999; font-size: 14px; }
+
+  .tips-text { font-size: 12px; color: #999; text-align: center; margin: 8px 0; line-height: 1.6; }
+
+  /* ===== Tab 导航 ===== */
+  .tab-bar {
+    display: flex; background: white;
+    border-bottom: 1px solid #e0e0e0;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .tab-btn {
+    flex: 1; padding: 12px 4px; font-size: 13px; color: #888;
+    border: none; background: none; cursor: pointer;
+    border-bottom: 3px solid transparent; transition: all 0.2s;
+  }
+  .tab-btn.active { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: 600; }
+  .tab-page { display: none; }
+  .tab-page.active { display: block; }
+
+  /* ===== 走读页 ===== */
+  .district-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+  .district-btn {
+    padding: 10px 4px; border: 1.5px solid #e0e0e0; border-radius: 8px;
+    background: white; font-size: 13px; cursor: pointer; text-align: center; transition: all 0.2s;
+  }
+  .district-btn.active { border-color: #1a73e8; background: #e8f0fe; color: #1a73e8; font-weight: 600; }
+  .nearby-tip { font-size: 12px; color: #999; margin-bottom: 8px; }
+
+  /* ===== 特长生页 ===== */
+  .talent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .talent-btn {
+    padding: 14px 8px; border: 1.5px solid #e0e0e0; border-radius: 10px;
+    background: white; font-size: 14px; cursor: pointer; text-align: center; transition: all 0.2s;
+  }
+  .talent-btn.active { border-color: #1a73e8; background: #e8f0fe; color: #1a73e8; font-weight: 600; }
+  .talent-tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin: 2px; }
+  .tag-art { background: #fce4ec; color: #c62828; }
+  .tag-sport { background: #e8f5e9; color: #2e7d32; }
+
+</style>
+
+</head>
+<body>
+
+<div class="header">
+  <h1>🎓 深圳中考志愿参考</h1>
+  <p>数据来源：2025年整理 · 仅供参考</p>
+</div>
+
+<!-- Tab 导航栏 -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('match')">🔍 志愿匹配</button>
+  <button class="tab-btn" onclick="switchTab('walk')">🚶 走读推荐</button>
+  <button class="tab-btn" onclick="switchTab('talent')">⭐ 特长生</button>
+</div>
+
+<!-- Tab 页面容器 -->
+<div id="tab-match" class="tab-page active">
+
+<!-- 输入区 -->
+<div class="card">
+  <h2>📝 输入成绩</h2>
+  
+  <div class="hukou-row">
+    <button class="hukou-btn active" onclick="setHukou('ac')" id="btn-ac">🏠 深户 (A类)</button>
+    <button class="hukou-btn" onclick="setHukou('d')" id="btn-d">📋 非深户 (D类)</button>
+  </div>
+
+  <div class="score-grid">
+    <div class="input-group">
+      <label>模考总分（文化课）</label>
+      <input type="number" id="mock-score" placeholder="如 510" min="0" max="540" oninput="onScoreInput()">
+    </div>
+    <div class="input-group">
+      <label>成绩类型</label>
+      <select id="score-type" onchange="onScoreInput()">
+        <option value="yi">一模成绩</option>
+        <option value="er">二模成绩</option>
+        <option value="san">三模成绩</option>
+        <option value="qimo">期末成绩</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label>体育分</label>
+      <input type="number" id="pe-score" placeholder="45" min="0" max="50" value="45" oninput="onScoreInput()">
+    </div>
+    <div class="input-group">
+      <label>实验素质分（含实验+综合素质+进步系数）</label>
+      <input type="number" id="extra-score" placeholder="63" min="0" max="120" value="63" oninput="onScoreInput()">
+    </div>
+  </div>
+
+  <div class="calc-tip" id="calc-tip">
+    💡 深圳中考满分630分 = 文化课560 + 体育50 + 实验素质70（含实验操作、综合素质及进步空间）<br>
+    模考一般只考文化课部分，加上其余科目才是中考总分
+  </div>
+
+  <button class="btn-primary" onclick="doSearch()">🔍 查看匹配学校</button>
+</div>
+
+<!-- 预测分数展示 -->
+<div class="card" id="result-card" style="margin-top:12px">
+  <h2>🎯 预测结果</h2>
+  <div class="predict-score">
+    <div class="num" id="predict-num">--</div>
+    <div class="label">预估中考分数</div>
+    <div class="score-range" id="score-range"></div>
+  </div>
+
+  <div id="tier-chong" class="tier">
+    <div class="tier-header tier-chong">
+      <span class="tier-badge tier-chong">冲</span> 可以冲一冲（分数差 0~10分）
+    </div>
+    <div class="school-list" id="list-chong"></div>
+  </div>
+
+  <div id="tier-wen" class="tier">
+    <div class="tier-header tier-wen">
+      <span class="tier-badge tier-wen">稳</span> 比较稳（分数差 10~25分）
+    </div>
+    <div class="school-list" id="list-wen"></div>
+  </div>
+
+  <div id="tier-bao" class="tier">
+    <div class="tier-header tier-bao">
+      <span class="tier-badge tier-bao">保</span> 保底选择（分数差 25~50分）
+    </div>
+    <div class="school-list" id="list-bao"></div>
+  </div>
+
+  <p class="tips-text">⚠️ 以上为参考，实际录取以官方为准<br>点击学校可查看详情</p>
+</div>
+
+</div><!-- end tab-match -->
+
+<!-- 页面2：走读推荐 -->
+<div class="tab-page" id="tab-walk">
+  <div class="card">
+    <h2>🚶 走读学校推荐</h2>
+    <p class="nearby-tip">选择你的居住区，优先推荐同区及相邻区的学校</p>
+    <div class="district-grid">
+      <button class="district-btn" onclick="selectDistrict('福田')">福田</button>
+      <button class="district-btn" onclick="selectDistrict('南山')">南山</button>
+      <button class="district-btn" onclick="selectDistrict('罗湖')">罗湖</button>
+      <button class="district-btn" onclick="selectDistrict('宝安')">宝安</button>
+      <button class="district-btn" onclick="selectDistrict('龙华')">龙华</button>
+      <button class="district-btn" onclick="selectDistrict('龙岗')">龙岗</button>
+      <button class="district-btn" onclick="selectDistrict('光明')">光明</button>
+      <button class="district-btn" onclick="selectDistrict('坪山')">坪山</button>
+      <button class="district-btn" onclick="selectDistrict('盐田')">盐田</button>
+    </div>
+    <div class="input-group" style="margin-bottom:12px">
+      <label>预估中考分（可选，留空显示所有）</label>
+      <input type="number" id="walk-score" placeholder="例如：550" min="400" max="630" oninput="renderWalk()">
+    </div>
+    <div id="walk-result"></div>
+    <p class="tips-text" style="margin:8px 12px">⚠️ 走读需结合实际通勤距离判断，后续版本将加入精准定位</p>
+  </div>
+</div>
+
+<!-- 页面3：特长生 -->
+<div class="tab-page" id="tab-talent">
+  <div class="card">
+    <h2>⭐ 特长生学校参考</h2>
+    <p class="nearby-tip">当前支持美术和体育，其他特长方向后续增加</p>
+    <div class="talent-grid">
+      <button class="talent-btn active" id="tbtn-art" onclick="selectTalent('art')">🎨 美术生</button>
+      <button class="talent-btn" id="tbtn-sport" onclick="selectTalent('sport')">⚽ 体育生</button>
+    </div>
+    <div id="talent-result"></div>
+    <p class="tips-text" style="margin:8px 12px">⚠️ 特长生招生政策每年可能调整，以官方公告为准</p>
+  </div>
+</div>
+
+<!-- 学校详情 Modal -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal" id="modal-content">
+    <span class="modal-close" onclick="closeModalDirect()">×</span>
+    <h3 id="modal-title"></h3>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ===== 数据 =====
+const SCHOOLS = [{"name": "深圳中学", "grade": "A+", "rank_ac": 1, "score_ac": 574, "score_ac_walk": null, "score_d": 574, "location": "中", "district": "罗湖", "affiliation": "市属", "dorm": "高一新生可申请入住 4 人套间", "feature": "竞赛之王，标准课程体系、实验课程体系、荣誉课程体系。", "total": 1970}, {"name": "深圳实验", "grade": "A+", "rank_ac": 2, "score_ac": 570, "score_ac_walk": null, "score_d": 570, "location": "中", "district": "南山", "affiliation": "市属", "dorm": "4人间上床下桌+独卫", "feature": "高考成绩突出，健全人格教育", "total": 554}, {"name": "深圳市高级中学", "grade": "A+", "rank_ac": 3, "score_ac": 569, "score_ac_walk": null, "score_d": 569, "location": "中", "district": "福田", "affiliation": "市属", "dorm": "中心校区学生宿舍 6-7 人一间", "feature": "地球不爆炸，高级不放假，", "total": 945}, {"name": "深圳外国语，A+568", "grade": "A+", "rank_ac": 4, "score_ac": 568, "score_ac_walk": null, "score_d": 568, "location": "东", "district": "盐田", "affiliation": "市属", "dorm": "标准为 6 人一间", "feature": "英德日俄法西全部外语语种，文科较强\n创新、外语、国际、文理四大学院，国际班\n按学期收伙食费，干饭无忧", "total": 831}, {"name": "红岭中学", "grade": "A头", "rank_ac": 5, "score_ac": 565, "score_ac_walk": null, "score_d": 565, "location": "中", "district": "福田", "affiliation": "福田", "dorm": "宿舍 6 人间，上床下桌和衣柜、书柜、杂物柜，上层为睡床", "feature": "人气高中，23年480人600+，食堂好吃", "total": 1312}, {"name": "育才中学↑", "grade": "A头", "rank_ac": 6, "score_ac": 564, "score_ac_walk": null, "score_d": 564, "location": "中", "district": "南山", "affiliation": "南山", "dorm": "四人间上床下桌", "feature": "特控率90%+", "total": 770}, {"name": "宝安中学", "grade": "A头", "rank_ac": 7, "score_ac": 564, "score_ac_walk": null, "score_d": 562, "location": "西", "district": "宝安", "affiliation": "宝安", "dorm": "宿舍有四人间和六人间，均为上下铺", "feature": "宝安区最强，23年特控率93.72%，宝中大酒楼全市闻名，宝中图书馆与深圳图书馆馆馆合作，通借通还。", "total": 1050}, {"name": "深大附中", "grade": "A头", "rank_ac": 8, "score_ac": 562, "score_ac_walk": null, "score_d": 562, "location": "中", "district": "南山", "affiliation": "市属", "dorm": "宿舍4-6人间，阳台有四个洗漱台，公共卫浴专人一天三次打扫", "feature": "清北、强基、培优、补弱全面推进", "total": 660}, {"name": "北师附南山，新校区", "grade": "A头", "rank_ac": 9, "score_ac": 562, "score_ac_walk": null, "score_d": 562, "location": "中", "district": "南山", "affiliation": "南山", "dorm": "4人间，独立卫浴，有书桌（非上床下桌）", "feature": "依托北师大教研能力强，招生规模小，扩张中", "total": 440}, {"name": "科高", "grade": "A头", "rank_ac": 10, "score_ac": 560, "score_ac_walk": null, "score_d": 560, "location": "中", "district": "龙岗西", "affiliation": "市属", "dorm": "6人间，上下铺", "feature": "严格管理，衡水模式，数据大王", "total": 1155}, {"name": "南外高", "grade": "A头", "rank_ac": 11, "score_ac": 559, "score_ac_walk": null, "score_d": 557, "location": "中", "district": "南山", "affiliation": "南山", "dorm": "25年将8人间，宽敞，走读同学较多", "feature": "南山JYJ亲儿子，有国际班，需选拔", "total": 630}, {"name": "龙城高级中学", "grade": "A头", "rank_ac": 12, "score_ac": 557, "score_ac_walk": null, "score_d": 557, "location": "东", "district": "龙岗东", "affiliation": "龙岗", "dorm": "6人间，上床下桌", "feature": "龙岗区属学霸，生源好，火箭班对标四大", "total": 1050}, {"name": "翠园，26年新校区↑", "grade": "A头", "rank_ac": 13, "score_ac": 557, "score_ac_walk": null, "score_d": 556, "location": "中", "district": "罗湖", "affiliation": "罗湖", "dorm": "4人+独卫", "feature": "受宿舍拖累，升学率很好，师资好", "total": 735}, {"name": "深二高级", "grade": "A头", "rank_ac": 14, "score_ac": 557, "score_ac_walk": null, "score_d": 554, "location": "中", "district": "南山", "affiliation": "市属", "dorm": "6人间，上下铺，楼道统一卫浴，无独立卫浴", "feature": "数据稳定，文化、艺体、航空全面开花", "total": 1100}, {"name": "南科大附中", "grade": "A头", "rank_ac": 15, "score_ac": 556, "score_ac_walk": null, "score_d": 556, "location": "西", "district": "宝安", "affiliation": "市属", "dorm": "学校的学生宿舍是 4-6 人间，采用上床下桌的布局，", "feature": "理念和模式先进，院士大讲堂，教授课堂", "total": 840}, {"name": "龙华高级", "grade": "A中", "rank_ac": 16, "score_ac": 553, "score_ac_walk": null, "score_d": 552, "location": "中", "district": "龙华", "affiliation": "龙华", "dorm": "6人+独卫", "feature": "龙华区属学霸，生源好，师资力量强，学校有点小", "total": 630}, {"name": "人附深", "grade": "A中", "rank_ac": 17, "score_ac": 553, "score_ac_walk": null, "score_d": 552, "location": "东", "district": "大鹏", "affiliation": "大鹏", "dorm": "6张上床下桌+双卫，25年3月更新", "feature": "共享人大附中本部教研，成绩好、签约条件厚道", "total": 1210}, {"name": "深二实", "grade": "A中", "rank_ac": 18, "score_ac": 550, "score_ac_walk": null, "score_d": 552, "location": "中", "district": "罗湖", "affiliation": "市属", "dorm": "8人+双卫", "feature": "数据稳定，艺术、体育成绩好，文化也不错", "total": 472}, {"name": "深圳实验光明", "grade": "A中", "rank_ac": 19, "score_ac": 549, "score_ac_walk": null, "score_d": 552, "location": "西", "district": "光明", "affiliation": "市属", "dorm": "6人间上床下桌+独卫，24年12月更新", "feature": "共享本部教研、管理模式、联合培养、统一考试排名", "total": 1050}, {"name": "省实深圳", "grade": "A中", "rank_ac": 20, "score_ac": 549, "score_ac_walk": null, "score_d": 550, "location": "中", "district": "龙岗西", "affiliation": "市属", "dorm": "上床下桌", "feature": "广东实验猛龙过江，关注24年高三深一模成绩", "total": 735}, {"name": "深外龙华-市属", "grade": "A中", "rank_ac": 21, "score_ac": 549, "score_ac_walk": null, "score_d": 549, "location": "中", "district": "龙华", "affiliation": "市属", "dorm": "6人间，上下铺，2个卫浴", "feature": "深外分校，共享本部国际部选拔资格", "total": 945}, {"name": "育才一中-2025↑", "grade": "A中", "rank_ac": 22, "score_ac": 549, "score_ac_walk": null, "score_d": 548, "location": "西", "district": "南山", "affiliation": "南山", "dorm": "四人间、六人间，有差异", "feature": "", "total": 880}, {"name": "深高级东-市属", "grade": "A中", "rank_ac": 23, "score_ac": 548, "score_ac_walk": null, "score_d": 546, "location": "东", "district": "坪山", "affiliation": "市属", "dorm": "5-6人+无桌子", "feature": "教师团队较为年轻30-35岁", "total": 1050}, {"name": "新安中学", "grade": "A中", "rank_ac": 24, "score_ac": 547, "score_ac_walk": null, "score_d": 549, "location": "西", "district": "宝安", "affiliation": "宝安", "dorm": "8人+独卫", "feature": "生源好，升学率开始抬头", "total": 840}, {"name": "深大实验", "grade": "A中", "rank_ac": 25, "score_ac": 546, "score_ac_walk": null, "score_d": 548, "location": "西", "district": "光明", "affiliation": "市属", "dorm": "6人，食便宜", "feature": "深大附中小弟，同一套班子，本部代培前50名，深大教育学院资源很好", "total": 630}, {"name": "华附龙岗", "grade": "A中", "rank_ac": 26, "score_ac": 545, "score_ac_walk": null, "score_d": 545, "location": "东", "district": "龙岗东", "affiliation": "龙岗", "dorm": "6人+独卫", "feature": "华中师范本部资源，10年持续上升，培养出状元", "total": 1050}, {"name": "科高龙岗-坪地新生", "grade": "A底", "rank_ac": 27, "score_ac": 545, "score_ac_walk": null, "score_d": 547, "location": "东", "district": "龙岗东", "affiliation": "市属", "dorm": "4人，上下铺", "feature": "忽略首年足球学校成绩，看24年高三深一模成绩", "total": 577}, {"name": "深北莫附中-2023", "grade": "A底", "rank_ac": 28, "score_ac": 544, "score_ac_walk": null, "score_d": 545, "location": "东", "district": "龙岗东", "affiliation": "市属", "dorm": "", "feature": "", "total": 630}, {"name": "中科附高↑", "grade": "A底", "rank_ac": 29, "score_ac": 542, "score_ac_walk": null, "score_d": 541, "location": "西", "district": "光明", "affiliation": "光明", "dorm": "6人，单层床，食便宜", "feature": "", "total": 735}, {"name": "南头中学", "grade": "A底", "rank_ac": 30, "score_ac": 541, "score_ac_walk": null, "score_d": 542, "location": "中", "district": "南山", "affiliation": "南山", "dorm": "4-8人+独卫", "feature": "历史最悠久的学校，师资力量强，素质培养", "total": 924}, {"name": "东师附深", "grade": "A底", "rank_ac": 31, "score_ac": 540, "score_ac_walk": null, "score_d": 543, "location": "东", "district": "坪山", "affiliation": "市属", "dorm": "", "feature": "本校很强，有东北来的老师，暂无高考成绩", "total": 660}, {"name": "盐高↑高性价比", "grade": "A底", "rank_ac": 32, "score_ac": 539, "score_ac_walk": null, "score_d": 541, "location": "东", "district": "盐田", "affiliation": "盐田", "dorm": "6人+独卫", "feature": "管理严格，风景好，成绩稳定，海风潮湿", "total": 1050}, {"name": "格致中学", "grade": "A底", "rank_ac": 33, "score_ac": 537, "score_ac_walk": null, "score_d": 541, "location": "中", "district": "龙华", "affiliation": "龙华", "dorm": "4人间，独立卫浴", "feature": "", "total": 630}, {"name": "红山中学", "grade": "A底", "rank_ac": 34, "score_ac": 537, "score_ac_walk": null, "score_d": 540, "location": "中", "district": "龙华", "affiliation": "龙华", "dorm": "4人+独卫", "feature": "", "total": 630}, {"name": "龙实高", "grade": "A底", "rank_ac": 35, "score_ac": 536, "score_ac_walk": null, "score_d": 540, "location": "东", "district": "龙岗西", "affiliation": "龙岗", "dorm": "我校宿舍，4人间，上床下桌，双卫浴", "feature": "招生规模小，管理严格，共享龙城高级中学的教学资源。", "total": 440}, {"name": "港中深明德8人间", "grade": "A底", "rank_ac": 36, "score_ac": 536, "score_ac_walk": null, "score_d": 539, "location": "中", "district": "福田", "affiliation": "福田", "dorm": "8人间", "feature": "", "total": 630}, {"name": "华侨城，A线534", "grade": "A底", "rank_ac": 37, "score_ac": 536, "score_ac_walk": null, "score_d": 537, "location": "中", "district": "南山", "affiliation": "南山", "dorm": "6-8人，食堂偏贵", "feature": "老牌学校，比较洋气，地理位置好", "total": 840}, {"name": "松岗中学", "grade": "B+头", "rank_ac": 38, "score_ac": 532, "score_ac_walk": null, "score_d": 538, "location": "西", "district": "宝安", "affiliation": "宝安", "dorm": "", "feature": "", "total": 420}, {"name": "深高园-创新", "grade": "B+头", "rank_ac": 39, "score_ac": 532, "score_ac_walk": null, "score_d": 538, "location": "东", "district": "龙岗东", "affiliation": "市属", "dorm": "上床下桌", "feature": "", "total": 880}, {"name": "罗湖外语学校", "grade": "B+头", "rank_ac": 40, "score_ac": 532, "score_ac_walk": null, "score_d": 538, "location": "中", "district": "罗湖", "affiliation": "罗湖", "dorm": "8人间+独卫", "feature": "", "total": 835}, {"name": "福田中学", "grade": "B+头", "rank_ac": 41, "score_ac": 532, "score_ac_walk": null, "score_d": 537, "location": "中", "district": "福田", "affiliation": "福田", "dorm": "8人+非独卫", "feature": "", "total": 1050}, {"name": "深技大附", "grade": "B+头", "rank_ac": 42, "score_ac": 531, "score_ac_walk": null, "score_d": 536, "location": "东", "district": "坪山", "affiliation": "市属", "dorm": "4个上铺，2个下铺", "feature": "田祚鹏校长，深实验本部出身，深实验光明创校团队", "total": 630}, {"name": "宝一外", "grade": "B+头", "rank_ac": 43, "score_ac": 531, "score_ac_walk": null, "score_d": 535, "location": "西", "district": "宝安", "affiliation": "宝安", "dorm": "6-8人+双卫", "feature": "", "total": 800}, {"name": "深二外-市属", "grade": "B+头", "rank_ac": 44, "score_ac": 530, "score_ac_walk": null, "score_d": 534, "location": "中", "district": "龙华", "affiliation": "市属", "dorm": "6人+独卫", "feature": "", "total": 990}, {"name": "龙津中学", "grade": "B+头", "rank_ac": 45, "score_ac": 528, "score_ac_walk": null, "score_d": 534, "location": "西", "district": "宝安", "affiliation": "宝安", "dorm": "龙津宿舍6人间，上床下桌，独立卫浴，24小时热水", "feature": "", "total": 1155}, {"name": "西浦高中", "grade": "B+头", "rank_ac": 46, "score_ac": 524, "score_ac_walk": null, "score_d": 530, "location": "中", "district": "福田", "affiliation": "福田", "dorm": "4-6张上床下桌+双卫", "feature": "", "total": 735}, {"name": "三高-国内班", "grade": "B+头", "rank_ac": 47, "score_ac": 524, "score_ac_walk": null, "score_d": 530, "location": "东", "district": "龙岗东", "affiliation": "市属", "dorm": "", "feature": "", "total": 787}, {"name": "深高园-理慧，4人间", "grade": "B+头", "rank_ac": 48, "score_ac": 524, "score_ac_walk": null, "score_d": 529, "location": "东", "district": "龙岗东", "affiliation": "市属", "dorm": "上床下桌", "feature": "", "total": 945}, {"name": "罗湖高级", "grade": "B+头", "rank_ac": 49, "score_ac": 523, "score_ac_walk": null, "score_d": 528, "location": "中", "district": "罗湖", "affiliation": "罗湖", "dorm": "", "feature": "", "total": 682}, {"name": "燕川中学", "grade": "B+中", "rank_ac": 50, "score_ac": 521, "score_ac_walk": null, "score_d": 532, "location": "西", "district": "宝安", "affiliation": "宝安", "dorm": "", "feature": "", "total": 1155}, {"name": "红岭大鹏华侨-2023", "grade": "B+中", "rank_ac": 51, "score_ac": 521, "score_ac_walk": null, "score_d": 531, "location": "东", "district": "大鹏", "affiliation": "大鹏", "dorm": "上床下桌", "feature": "", "total": 630}, {"name": "平冈中学", "grade": "B+中", "rank_ac": 52, "score_ac": 519, "score_ac_walk": null, "score_d": 533, "location": "东", "district": "龙岗东", "affiliation": "龙岗", "dorm": "4-6人+独卫", "feature": "", "total": 650}, {"name": "深高园-有为-2023", "grade": "B+中", "rank_ac": 53, "score_ac": 517, "score_ac_walk": null, "score_d": 523, "location": "东", "district": "龙岗东", "affiliation": "市属", "dorm": "上床下桌", "feature": "", "total": 525}, {"name": "深外园弘知↑", "grade": "B+中", "rank_ac": 54, "score_ac": 514, "score_ac_walk": null, "score_d": 520, "location": "西", "district": "光明", "affiliation": "市属", "dorm": "4个上铺，2个下铺", "feature": "", "total": 1050}, {"name": "西乡中学", "grade": "B+中", "rank_ac": 55, "score_ac": 513, "score_ac_walk": null, "score_d": 523, "location": "西", "district": "宝安", "affiliation": "宝安", "dorm": "6人+独卫", "feature": "", "total": 1050}, {"name": "深高园-文博", "grade": "B+中", "rank_ac": 56, "score_ac": 512, "score_ac_walk": null, "score_d": 522, "location": "东", "district": "龙岗东", "affiliation": "市属", "dorm": "上床下桌", "feature": "", "total": 1050}, {"name": "深实验明理", "grade": "B+中", "rank_ac": 57, "score_ac": 511, "score_ac_walk": null, "score_d": 523, "location": "东", "district": "坪山", "affiliation": "市属", "dorm": "上下铺，中间有书桌", "feature": "", "total": 1050}, {"name": "深实验崇文", "grade": "B+中", "rank_ac": 58, "score_ac": 511, "score_ac_walk": null, "score_d": 513, "location": "东", "district": "坪山", "affiliation": "市属", "dorm": "上下铺，中间有书桌", "feature": "", "total": 945}, {"name": "光明区高级", "grade": "B+中", "rank_ac": 59, "score_ac": 508, "score_ac_walk": null, "score_d": 526, "location": "西", "district": "光明", "affiliation": "光明", "dorm": "4-6人间", "feature": "特优班出口好，", "total": 1584}, {"name": "福海中学", "grade": "B+中", "rank_ac": 60, "score_ac": 507, "score_ac_walk": null, "score_d": 523, "location": "西", "district": "宝安", "affiliation": "宝安", "dorm": "上床下桌", "feature": "", "total": 707}, {"name": "龙外高", "grade": "B+中", "rank_ac": 61, "score_ac": 507, "score_ac_walk": null, "score_d": 522, "location": "中", "district": "龙华", "affiliation": "龙华", "dorm": "", "feature": "", "total": 630}, {"name": "第七高级", "grade": "B+中", "rank_ac": 62, "score_ac": 504, "score_ac_walk": null, "score_d": 520, "location": "西", "district": "宝安", "affiliation": "市属", "dorm": "6人间+独卫", "feature": "", "total": 1050}, {"name": "深实验卓越", "grade": "B+中", "rank_ac": 63, "score_ac": 503, "score_ac_walk": null, "score_d": 514, "location": "东", "district": "坪山", "affiliation": "市属", "dorm": "上下铺，中间有书桌", "feature": "", "total": 840}, {"name": "一职综合高中", "grade": "B+底", "rank_ac": 64, "score_ac": 503, "score_ac_walk": null, "score_d": 503, "location": "中", "district": "福田", "affiliation": "市属", "dorm": "", "feature": "", "total": 120}, {"name": "致理中学-2023", "grade": "B+底", "rank_ac": 65, "score_ac": 501, "score_ac_walk": null, "score_d": 521, "location": "中", "district": "龙华", "affiliation": "龙华", "dorm": "上床下桌", "feature": "", "total": 1575}, {"name": "深实验至臻-2023", "grade": "B+底", "rank_ac": 66, "score_ac": 501, "score_ac_walk": null, "score_d": 514, "location": "东", "district": "坪山", "affiliation": "市属", "dorm": "上下铺，中间有书桌", "feature": "", "total": 420}, {"name": "深外园博雅", "grade": "B+底", "rank_ac": 67, "score_ac": 501, "score_ac_walk": null, "score_d": 513, "location": "西", "district": "光明", "affiliation": "市属", "dorm": "4个上铺，2个下铺", "feature": "", "total": 945}, {"name": "北大附中", "grade": "B+底", "rank_ac": 68, "score_ac": 495, "score_ac_walk": null, "score_d": 517, "location": "中", "district": "福田", "affiliation": "福田", "dorm": "8人+非独卫，临时校区，全住宿", "feature": "", "total": 525}, {"name": "观澜中学", "grade": "B+底", "rank_ac": 69, "score_ac": 495, "score_ac_walk": null, "score_d": 517, "location": "中", "district": "龙华", "affiliation": "龙华", "dorm": "上下铺", "feature": "", "total": 1050}, {"name": "深外园致远", "grade": "B+底", "rank_ac": 70, "score_ac": 495, "score_ac_walk": null, "score_d": 513, "location": "西", "district": "光明", "affiliation": "市属", "dorm": "4个上铺，2个下铺", "feature": "", "total": 630}, {"name": "坪山高级", "grade": "B+底", "rank_ac": 71, "score_ac": 492, "score_ac_walk": null, "score_d": 518, "location": "东", "district": "坪山", "affiliation": "坪山", "dorm": "上床下桌", "feature": "", "total": 800}, {"name": "盐港（综合高中）", "grade": "B+底", "rank_ac": 72, "score_ac": 492, "score_ac_walk": null, "score_d": 492, "location": "东", "district": "盐田", "affiliation": "盐田", "dorm": "", "feature": "", "total": 100}, {"name": "行知（综合高中）", "grade": "B+底", "rank_ac": 73, "score_ac": 491, "score_ac_walk": null, "score_d": 491, "location": "中", "district": "罗湖", "affiliation": "罗湖", "dorm": "", "feature": "", "total": 150}, {"name": "龙科高-2024", "grade": "B+底", "rank_ac": 74, "score_ac": 489, "score_ac_walk": null, "score_d": 514, "location": "中", "district": "龙华", "affiliation": "龙华", "dorm": "", "feature": "", "total": 1732}, {"name": "深外园理工-2023", "grade": "B+底", "rank_ac": 75, "score_ac": 489, "score_ac_walk": null, "score_d": 511, "location": "西", "district": "光明", "affiliation": "市属", "dorm": "4个上铺，2个下铺", "feature": "", "total": 525}, {"name": "聚龙，B+线485", "grade": "B+底", "rank_ac": 76, "score_ac": 485, "score_ac_walk": null, "score_d": 516, "location": "东", "district": "坪山", "affiliation": "坪山", "dorm": "5-6人间", "feature": "", "total": 1050}, {"name": "宝石外", "grade": "B头", "rank_ac": 77, "score_ac": 482, "score_ac_walk": null, "score_d": 512, "location": "西", "district": "宝安", "affiliation": "宝安", "dorm": "四人间全覆盖，走读生可申请宿舍", "feature": "", "total": 567}, {"name": "横岗高级", "grade": "B头", "rank_ac": 78, "score_ac": 480, "score_ac_walk": null, "score_d": 510, "location": "东", "district": "龙岗东", "affiliation": "龙岗", "dorm": "8人+独卫", "feature": "毛展煜博士校长", "total": 850}, {"name": "光明中学", "grade": "B头", "rank_ac": 79, "score_ac": 480, "score_ac_walk": null, "score_d": 509, "location": "西", "district": "光明", "affiliation": "光明", "dorm": "6人+独卫+洗衣机入校", "feature": "2024级物理8个班，历史4个班，音美学生选历史，走读生基本都是周边学生。三个层次、日语班", "total": 630}, {"name": "龙华中学↑新校区", "grade": "B头", "rank_ac": 80, "score_ac": 475, "score_ac_walk": null, "score_d": 510, "location": "中", "district": "龙华", "affiliation": "龙华", "dorm": "", "feature": "", "total": 420}, {"name": "二实明远-2023", "grade": "B头", "rank_ac": 81, "score_ac": 474, "score_ac_walk": null, "score_d": 509, "location": "东", "district": "大鹏", "affiliation": "市属", "dorm": "上下铺", "feature": "", "total": 630}, {"name": "龙岗二高(布高更名）↑", "grade": "B头", "rank_ac": 82, "score_ac": 474, "score_ac_walk": null, "score_d": 508, "location": "中", "district": "龙岗西", "affiliation": "龙岗", "dorm": "8-10人+2卫，无洗衣机", "feature": "", "total": 1050}, {"name": "平湖外国语", "grade": "B头", "rank_ac": 83, "score_ac": 471, "score_ac_walk": null, "score_d": 506, "location": "东", "district": "龙岗西", "affiliation": "龙岗", "dorm": "8人+独卫", "feature": "", "total": 350}, {"name": "深中园科技-2024", "grade": "B头", "rank_ac": 84, "score_ac": 470, "score_ac_walk": null, "score_d": 505, "location": "东", "district": "深汕", "affiliation": "市属", "dorm": "", "feature": "", "total": 1100}, {"name": "沙井中学", "grade": "B头", "rank_ac": 85, "score_ac": 469, "score_ac_walk": null, "score_d": 508, "location": "西", "district": "宝安", "affiliation": "宝安", "dorm": "", "feature": "", "total": 650}, {"name": "深中园数理-2023", "grade": "B头", "rank_ac": 86, "score_ac": 468, "score_ac_walk": null, "score_d": 511, "location": "东", "district": "深汕", "affiliation": "市属", "dorm": "", "feature": "", "total": 1100}, {"name": "深中园实验-2024", "grade": "B头", "rank_ac": 87, "score_ac": 468, "score_ac_walk": null, "score_d": 506, "location": "东", "district": "深汕", "affiliation": "市属", "dorm": "", "feature": "", "total": 1100}, {"name": "二高深汕", "grade": "B中", "rank_ac": 88, "score_ac": 466, "score_ac_walk": null, "score_d": 505, "location": "东", "district": "深汕", "affiliation": "市属", "dorm": "", "feature": "", "total": 1000}, {"name": "深艺高，可正常文化高考", "grade": "B中", "rank_ac": 89, "score_ac": 464, "score_ac_walk": null, "score_d": 499, "location": "中", "district": "龙华", "affiliation": "龙华", "dorm": "", "feature": "", "total": 420}, {"name": "布中-走读", "grade": "B中", "rank_ac": 90, "score_ac": 462, "score_ac_walk": null, "score_d": 503, "location": "中", "district": "龙岗西", "affiliation": "龙岗", "dorm": "无住宿", "feature": "", "total": 450}, {"name": "深美-必选美术-必选历史", "grade": "B中", "rank_ac": 91, "score_ac": 459, "score_ac_walk": null, "score_d": 492, "location": "中", "district": "罗湖", "affiliation": "罗湖", "dorm": "", "feature": "", "total": 417}];
+
+let hukou = 'ac';
+
+function setHukou(type) {
+  hukou = type;
+  document.getElementById('btn-ac').classList.toggle('active', type === 'ac');
+  document.getElementById('btn-d').classList.toggle('active', type === 'd');
+}
+
+// 模考 → 中考 换算系数（根据考试类型微调）
+const TYPE_BONUS = { qimo: -5, yi: -5, er: 0, san: 5 };
+
+function onScoreInput() {
+  const mock = parseInt(document.getElementById('mock-score').value) || 0;
+  if (!mock) return;
+  const pe = parseInt(document.getElementById('pe-score').value) || 45;
+  const extra = parseInt(document.getElementById('extra-score').value) || 63;
+  const type = document.getElementById('score-type').value;
+  const bonus = TYPE_BONUS[type] || 0;
+  const predict = mock + pe + extra + bonus;
+  document.getElementById('calc-tip').innerHTML =
+    `💡 预估中考分：<strong style="color:#1a73e8;font-size:16px">${predict}分</strong>（文化课${mock} + 体育${pe} + 实验素质${extra}${bonus !== 0 ? (bonus >= 0 ? '+' : '') + bonus : ''}）<br>
+    <span style="color:#999">二模最接近中考难度，三模略偏易所以略加分</span>`;
+}
+
+function doSearch() {
+  const mock = parseInt(document.getElementById('mock-score').value);
+  if (!mock || mock < 100) {
+    alert('请输入有效的模考文化课分数（100-560分）');
+    return;
+  }
+  const pe = parseInt(document.getElementById('pe-score').value) || 45;
+  const extra = parseInt(document.getElementById('extra-score').value) || 63;
+  const type = document.getElementById('score-type').value;
+  const bonus = TYPE_BONUS[type] || 0;
+  const predict = mock + pe + extra + bonus;
+
+  document.getElementById('predict-num').textContent = predict;
+  document.getElementById('score-range').textContent =
+    `参考范围：${predict - 8} ~ ${predict + 8} 分`;
+
+  const scoreKey = hukou === 'ac' ? 'score_ac' : 'score_d';
+  
+  const chong = [], wen = [], bao = [];
+  
+  SCHOOLS.forEach(s => {
+    const sScore = s[scoreKey];
+    if (!sScore) return;
+    const diff = predict - sScore;
+    const item = { ...s, diff };
+    if (diff >= 0 && diff < 10) chong.push(item);
+    else if (diff >= 10 && diff < 25) wen.push(item);
+    else if (diff >= 25 && diff < 50) bao.push(item);
+  });
+
+  renderList('list-chong', chong);
+  renderList('list-wen', wen);
+  renderList('list-bao', bao);
+
+  window.scrollTo({top: document.getElementById('result-card').offsetTop - 10, behavior: 'smooth'});
+}
+
+function renderList(id, items) {
+  const el = document.getElementById(id);
+  if (items.length === 0) {
+    el.innerHTML = '<div class="no-result">暂无匹配学校</div>';
+    return;
+  }
+  items.sort((a, b) => b[hukou === 'ac' ? 'score_ac' : 'score_d'] - a[hukou === 'ac' ? 'score_ac' : 'score_d']);
+  el.innerHTML = items.map(s => {
+    const score = hukou === 'ac' ? s.score_ac : s.score_d;
+    const gradeClass = 'grade-' + s.grade.replace(/[（）()]/g, '').substring(0, 2);
+    return `<div class="school-item" onclick="showDetail(${s.rank_ac || 0}, '${escape(JSON.stringify(s))}')">
+      <div class="school-top">
+        <span class="school-name">${s.name}</span>
+        <span>
+          <span class="school-score">${score}分</span>
+          <span class="school-diff"> +${s.diff}分</span>
+        </span>
+      </div>
+      <div class="school-tags">
+        <span class="tag ${gradeClass}">${s.grade}</span>
+        <span class="tag district">${s.district}</span>
+        ${s.affiliation ? `<span class="tag">${s.affiliation}</span>` : ''}
+        ${s.total ? `<span class="tag">招${s.total}人</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showDetail(rank, encoded) {
+  const s = JSON.parse(unescape(encoded));
+  document.getElementById('modal-title').textContent = s.name;
+  const rows = [
+    ['等级', s.grade],
+    ['深户录取分', s.score_ac ? s.score_ac + '分' : '-'],
+    ['非深录取分', s.score_d ? s.score_d + '分' : '-'],
+    ['所在区', s.district],
+    ['行政归属', s.affiliation],
+    ['位置', s.location === '中' ? '市中心' : s.location === '西' ? '西部' : s.location === '东' ? '东部' : s.location],
+    ['招生人数', s.total ? s.total + '人' : '-'],
+    ['宿舍', s.dorm || '-'],
+    ['学校特色', s.feature || '-'],
+  ];
+  document.getElementById('modal-body').innerHTML = rows.map(([k, v]) =>
+    `<div class="detail-row"><span class="detail-label">${k}</span><span class="detail-value">${v}</span></div>`
+  ).join('');
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal')) closeModalDirect();
+}
+function closeModalDirect() {
+  document.getElementById('modal').classList.remove('show');
+}
+
+// ===== Tab 切换 =====
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', ['match','walk','talent'][i] === name);
+  });
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'walk') renderWalk();
+  if (name === 'talent') renderTalent();
+}
+
+// ===== 走读页 =====
+// 相邻区映射
+const ADJACENT = {
+  '福田': ['南山','罗湖','龙华'],
+  '南山': ['福田','宝安','光明'],
+  '罗湖': ['福田','龙华','盐田'],
+  '宝安': ['南山','光明','龙华'],
+  '龙华': ['福田','罗湖','龙岗','宝安'],
+  '龙岗': ['龙华','坪山','盐田'],
+  '光明': ['南山','宝安'],
+  '坪山': ['龙岗'],
+  '盐田': ['罗湖','龙岗'],
+};
+let walkDistrict = '';
+
+function selectDistrict(d) {
+  walkDistrict = d;
+  document.querySelectorAll('.district-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === d);
+  });
+  renderWalk();
+}
+
+function renderWalk() {
+  if (!walkDistrict) {
+    document.getElementById('walk-result').innerHTML = '<div class="no-result">请先选择居住区</div>';
+    return;
+  }
+  const scoreEl = document.getElementById('walk-score');
+  const filterScore = parseInt(scoreEl.value) || 0;
+  const adjacent = ADJACENT[walkDistrict] || [];
+
+  const same = [], near = [];
+  SCHOOLS.forEach(s => {
+    if (filterScore && (s.score_ac < filterScore - 50 || s.score_ac > filterScore + 20)) return;
+    if (s.district === walkDistrict) same.push({...s, walkTag: '同区'});
+    else if (adjacent.some(a => s.district.includes(a) || s.district === a)) near.push({...s, walkTag: '邻区'});
+  });
+
+  same.sort((a,b) => b.score_ac - a.score_ac);
+  near.sort((a,b) => b.score_ac - a.score_ac);
+
+  let html = '';
+  if (same.length) {
+    html += `<div style="font-size:13px;font-weight:600;color:#1a73e8;margin:8px 0 4px">📍 ${walkDistrict}区（${same.length}所）</div>`;
+    html += same.map(s => walkItem(s)).join('');
+  }
+  if (near.length) {
+    html += `<div style="font-size:13px;font-weight:600;color:#43a047;margin:12px 0 4px">🔄 相邻区（${near.length}所）</div>`;
+    html += near.slice(0,8).map(s => walkItem(s)).join('');
+  }
+  if (!same.length && !near.length) html = '<div class="no-result">暂无符合条件的学校</div>';
+  document.getElementById('walk-result').innerHTML = html;
+}
+
+function walkItem(s) {
+  return `<div class="school-item" onclick="showDetail(0, '${escape(JSON.stringify(s))}')">
+    <div class="school-top">
+      <span class="school-name">${s.name}</span>
+      <span class="school-score">${s.score_ac}分</span>
+    </div>
+    <div class="school-tags">
+      <span class="tag ${s.walkTag === '同区' ? 'district' : ''}" style="${s.walkTag==='邻区'?'background:#e8f5e9;color:#2e7d32':''}">${s.walkTag}</span>
+      <span class="tag district">${s.district}</span>
+      <span class="tag grade-${s.grade.substring(0,2)}">${s.grade}</span>
+    </div>
+  </div>`;
+}
+
+// ===== 特长生页 =====
+// 美术：名字/特色含美术关键词的学校
+const ART_KEYWORDS = ['美术','艺术','艺','美'];
+// 体育：名字/特色含体育关键词的学校
+const SPORT_KEYWORDS = ['体育','足球','篮球','运动'];
+// 已知特长校补充标注
+const TALENT_EXTRA = {
+  '深美-必选美术-必选历史': { art: true, note: '专业美术高中，必选美术+历史' },
+  '深二实': { art: true, note: '艺术体育成绩好' },
+  '光明中学': { art: true, note: '音美学生选历史，日语班' },
+  '深艺高，可正常文化高考': { art: true, sport: true, note: '艺术类高中，可正常高考' },
+  '深二高级': { art: true, sport: true, note: '文化、艺体、航空全面开花' },
+  '科高龙岗-坪地新生': { sport: true, note: '原足球学校' },
+};
+
+let talentType = 'art';
+function selectTalent(t) {
+  talentType = t;
+  document.getElementById('tbtn-art').classList.toggle('active', t === 'art');
+  document.getElementById('tbtn-sport').classList.toggle('active', t === 'sport');
+  renderTalent();
+}
+
+function renderTalent() {
+  const keywords = talentType === 'art' ? ART_KEYWORDS : SPORT_KEYWORDS;
+  const results = SCHOOLS.filter(s => {
+    const extra = TALENT_EXTRA[s.name];
+    if (extra && extra[talentType]) return true;
+    const text = (s.name + s.feature).toLowerCase();
+    return keywords.some(k => text.includes(k));
+  });
+
+  if (!results.length) {
+    document.getElementById('talent-result').innerHTML = '<div class="no-result">暂无数据</div>';
+    return;
+  }
+
+  document.getElementById('talent-result').innerHTML = results.map(s => {
+    const extra = TALENT_EXTRA[s.name];
+    const tagClass = talentType === 'art' ? 'tag-art' : 'tag-sport';
+    const tagText = talentType === 'art' ? '🎨 美术' : '⚽ 体育';
+    return `<div class="school-item" onclick="showDetail(0, '${escape(JSON.stringify(s))}')">
+      <div class="school-top">
+        <span class="school-name">${s.name}</span>
+        <span class="school-score">${s.score_ac}分</span>
+      </div>
+      <div class="school-tags">
+        <span class="talent-tag ${tagClass}">${tagText}</span>
+        <span class="tag district">${s.district}</span>
+        <span class="tag grade-${s.grade.substring(0,2)}">${s.grade}</span>
+      </div>
+      ${extra && extra.note ? `<div style="font-size:11px;color:#888;margin-top:4px;padding:0 2px">💡 ${extra.note}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+</script>
+
+</body>
+</html>
