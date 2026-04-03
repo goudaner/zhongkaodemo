@@ -132,7 +132,7 @@ const LOCK_MS = 2500;      // 锁定2.5秒后才能扫下一个
 
 function startScan() {
   navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
   }).then(s => {
     stream = s;
     const video = document.getElementById('preview');
@@ -164,17 +164,19 @@ function stopScan() {
 
 const hints = new Map();
 hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
-  ZXing.BarcodeFormat.EAN_13,
-  ZXing.BarcodeFormat.EAN_8,
-  ZXing.BarcodeFormat.CODE_128,
+  ZXing.BarcodeFormat.CODE_128,   // 优先 CODE128（字母+数字混合码）
   ZXing.BarcodeFormat.CODE_39,
   ZXing.BarcodeFormat.CODE_93,
+  ZXing.BarcodeFormat.EAN_13,
+  ZXing.BarcodeFormat.EAN_8,
   ZXing.BarcodeFormat.ITF,
   ZXing.BarcodeFormat.UPC_A,
   ZXing.BarcodeFormat.UPC_E,
   ZXing.BarcodeFormat.CODABAR,
 ]);
 hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+hints.set(ZXing.DecodeHintType.ASSUME_GS1, false);
+hints.set(ZXing.DecodeHintType.PURE_BARCODE, false);
 const reader = new ZXing.MultiFormatReader();
 reader.setHints(hints);
 
@@ -192,8 +194,17 @@ function doScan() {
 
   try {
     const lum = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
-    const bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
-    const result = reader.decode(bmp);
+    // 同时尝试普通二值化 和 反转二值化，提高识别率
+    let result = null;
+    try {
+      const bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
+      result = reader.decode(bmp);
+    } catch(e1) {
+      try {
+        const bmp2 = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum.invert()));
+        result = reader.decode(bmp2);
+      } catch(e2) {}
+    }
     if (result) {
       const code = result.getText();
       // 锁定，防止同一帧/连续帧重复触发
