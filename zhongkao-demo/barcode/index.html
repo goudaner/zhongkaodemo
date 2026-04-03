@@ -11,13 +11,15 @@
   .scan-area { background: white; margin: 12px; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
   #interactive { position: relative; width: 100%; background: #000; display: none; }
   #interactive video { width: 100% !important; max-height: 260px; display: block; object-fit: cover; }
-  #interactive canvas { display: none; }
-  .scan-line { position: absolute; left: 10%; right: 10%; top: 50%; height: 2px; background: rgba(255,80,80,0.85); box-shadow: 0 0 8px rgba(255,80,80,0.6); animation: scan 1.8s ease-in-out infinite; pointer-events: none; }
-  @keyframes scan { 0%,100%{top:25%} 50%{top:75%} }
-  .corner { position: absolute; width: 24px; height: 24px; border-color: #1677ff; border-style: solid; pointer-events: none; }
-  .corner.tl{top:12%;left:8%;border-width:3px 0 0 3px} .corner.tr{top:12%;right:8%;border-width:3px 3px 0 0}
-  .corner.bl{bottom:12%;left:8%;border-width:0 0 3px 3px} .corner.br{bottom:12%;right:8%;border-width:0 3px 3px 0}
-  #scanning-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.85); font-size: 12px; white-space: nowrap; text-shadow: 0 1px 3px rgba(0,0,0,0.5); pointer-events: none; }
+  #interactive canvas.drawingBuffer { display: none; }
+  .scan-overlay { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .scan-box { width: 70%; aspect-ratio: 3/1; border: 2px solid rgba(255,255,255,0.4); border-radius: 4px; position: relative; }
+  .scan-line { position: absolute; left: 0; right: 0; height: 2px; background: rgba(255,80,80,0.9); box-shadow: 0 0 8px rgba(255,80,80,0.7); animation: scan 1.8s ease-in-out infinite; }
+  @keyframes scan { 0%,100%{top:0} 50%{top:100%} }
+  .scan-hint { color: rgba(255,255,255,0.85); font-size: 12px; margin-top: 10px; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+  /* 扫到时的闪烁反馈 */
+  .scan-flash { position: absolute; inset: 0; background: rgba(255,255,255,0.5); opacity: 0; pointer-events: none; transition: opacity 0.1s; }
+  .scan-flash.active { opacity: 1; }
   .scan-buttons { padding: 14px 16px; display: flex; gap: 10px; }
   .btn { flex: 1; padding: 12px 10px; border: none; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
   .btn:active { transform: scale(0.97); opacity: 0.85; }
@@ -55,16 +57,19 @@
   .empty-tip { padding: 40px; text-align: center; color: #bbb; font-size: 14px; }
   .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; z-index: 9999; white-space: nowrap; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
   .toast.show { opacity: 1; }
+  /* 冷却状态提示 */
+  #cooldown-bar { display: none; margin: 0 12px 8px; background: #fff7e6; border-radius: 8px; padding: 8px 14px; font-size: 13px; color: #d46b08; text-align: center; border-left: 4px solid #ffa940; }
 </style>
 </head>
 <body>
 <header>📦 条形码扫描统计</header>
 <div class="scan-area">
   <div id="interactive">
-    <div class="scan-line"></div>
-    <div class="corner tl"></div><div class="corner tr"></div>
-    <div class="corner bl"></div><div class="corner br"></div>
-    <span id="scanning-hint">将条形码对准扫描框</span>
+    <div class="scan-overlay">
+      <div class="scan-box"><div class="scan-line"></div></div>
+      <div class="scan-hint" id="scan-hint">将条形码对准扫描框</div>
+    </div>
+    <div class="scan-flash" id="scan-flash"></div>
   </div>
   <div class="scan-buttons">
     <button class="btn btn-primary" id="btn-start" onclick="startScan()">📷 开始扫描</button>
@@ -75,6 +80,7 @@
     <button onclick="addManual()">添加</button>
   </div>
 </div>
+<div id="cooldown-bar">✅ 已记录，请对准下一个条码…</div>
 <div class="last-scan" id="last-scan"></div>
 <div class="stats-bar">
   <div class="stat-card"><div class="stat-num" id="total-scans">0</div><div class="stat-label">总扫描次数</div></div>
@@ -96,63 +102,69 @@
 <script>
 let barcodeMap = new Map();
 let totalScans = 0;
-let scanningActive = false;
-let lastCode = '';
-let lastCodeTime = 0;
+let inCooldown = false;      // 冷却中：不接受新扫描
+let cooldownTimer = null;
+const COOLDOWN_MS = 2000;    // 扫到一个后，2秒内不重复记录
 
 function startScan() {
   const container = document.getElementById('interactive');
   container.style.display = 'block';
   document.getElementById('btn-start').style.display = 'none';
   document.getElementById('btn-stop').style.display = '';
-  scanningActive = true;
 
   Quagga.init({
     inputStream: {
       name: 'Live',
       type: 'LiveStream',
       target: document.getElementById('interactive'),
-      constraints: {
-        facingMode: 'environment',
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      }
+      constraints: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
     },
     decoder: {
-      readers: [
-        'ean_reader', 'ean_8_reader', 'code_128_reader',
-        'code_39_reader', 'code_93_reader', 'upc_reader',
-        'upc_e_reader', 'codabar_reader', 'i2of5_reader'
-      ]
+      readers: ['ean_reader','ean_8_reader','code_128_reader','code_39_reader','code_93_reader','upc_reader','upc_e_reader','codabar_reader','i2of5_reader']
     },
     locate: true
   }, function(err) {
-    if (err) {
-      showToast('摄像头启动失败：' + err.message);
-      stopScan();
-      return;
-    }
+    if (err) { showToast('摄像头启动失败：' + (err.message||err)); stopScan(); return; }
     Quagga.start();
   });
 
   Quagga.onDetected(function(result) {
+    if (inCooldown) return;           // 冷却中，直接忽略
     const code = result.codeResult.code;
-    const now = Date.now();
-    if (code && (code !== lastCode || now - lastCodeTime > 1500)) {
-      lastCode = code;
-      lastCodeTime = now;
-      addBarcode(code);
-      if (navigator.vibrate) navigator.vibrate(60);
-    }
+    if (!code) return;
+
+    // 进入冷却，防止同一个码被连续识别多次
+    inCooldown = true;
+    document.getElementById('cooldown-bar').style.display = 'block';
+    document.getElementById('scan-hint').textContent = '✅ 已记录，请对准下一个…';
+
+    // 闪光反馈
+    const flash = document.getElementById('scan-flash');
+    flash.classList.add('active');
+    setTimeout(() => flash.classList.remove('active'), 150);
+
+    addBarcode(code);
+    if (navigator.vibrate) navigator.vibrate([80, 50, 80]);
+
+    // 2秒后解除冷却
+    clearTimeout(cooldownTimer);
+    cooldownTimer = setTimeout(() => {
+      inCooldown = false;
+      document.getElementById('cooldown-bar').style.display = 'none';
+      document.getElementById('scan-hint').textContent = '将条形码对准扫描框';
+    }, COOLDOWN_MS);
   });
 }
 
 function stopScan() {
-  scanningActive = false;
   try { Quagga.stop(); } catch(e) {}
+  inCooldown = false;
+  clearTimeout(cooldownTimer);
   document.getElementById('interactive').style.display = 'none';
   document.getElementById('btn-start').style.display = '';
   document.getElementById('btn-stop').style.display = 'none';
+  document.getElementById('cooldown-bar').style.display = 'none';
+  document.getElementById('scan-hint').textContent = '将条形码对准扫描框';
 }
 
 function addBarcode(code) {
@@ -163,7 +175,7 @@ function addBarcode(code) {
   totalScans++;
   const el = document.getElementById('last-scan');
   el.style.display = 'block';
-  el.innerHTML = '✅ 已扫：<strong>' + code + '</strong>　当前数量：<strong>' + barcodeMap.get(code) + '</strong>';
+  el.innerHTML = '✅ 已扫：<strong>' + esc(code) + '</strong>　累计数量：<strong>' + barcodeMap.get(code) + '</strong>';
   renderTable();
   updateStats();
 }
@@ -208,10 +220,9 @@ function renderTable() {
   }
   const rows = [...barcodeMap.entries()].map(([code, count], i) => {
     const bc = count > 1 ? 'count-badge multi' : 'count-badge';
-    const ec = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    return '<tr><td class="seq-col">'+(i+1)+'</td><td class="barcode-col">'+ec+'</td><td class="count-col"><span class="'+bc+'">'+count+'</span></td><td class="action-col"><button class="del-btn" onclick=\'deleteEntry('+JSON.stringify(code)+')\'>×</button></td></tr>';
+    return '<tr><td class="seq-col">'+(i+1)+'</td><td class="barcode-col">'+esc(code)+'</td><td class="count-col"><span class="'+bc+'">'+count+'</span></td><td class="action-col"><button class="del-btn" onclick=\'deleteEntry('+JSON.stringify(code)+')\'>×</button></td></tr>';
   }).join('');
-  container.innerHTML = '<table><thead><tr><th class="seq-col">#</th><th>条形码</th><th class="count-col">数量</th><th class="action-col"></th></tr></thead><tbody>'+rows+'</tbody></table>';
+  container.innerHTML = '<table><thead><tr><th class="seq-col">#</th><th>条形码</th><th class="count-col">数量</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
 }
 
 function exportExcel() {
@@ -230,8 +241,8 @@ function exportExcel() {
   showToast('已导出，用 Excel 打开即可');
 }
 
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function pad(n) { return String(n).padStart(2,'0'); }
-
 function showToast(msg) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
