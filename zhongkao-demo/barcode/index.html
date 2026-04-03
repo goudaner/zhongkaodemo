@@ -77,7 +77,9 @@
   .empty-tip { padding: 40px; text-align: center; color: #bbb; font-size: 14px; }
   .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; z-index: 9999; white-space: nowrap; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
   .toast.show { opacity: 1; }
-  #api-warn { margin: 8px 12px; padding: 10px 14px; background: #fff7e6; border-left: 4px solid #ffa940; border-radius: 8px; font-size: 13px; color: #d46b08; display: none; }
+  #api-warn { margin: 8px 12px; padding: 10px 14px; border-radius: 8px; font-size: 13px; display: none; }
+  #api-warn.warn { background: #fff7e6; border-left: 4px solid #ffa940; color: #d46b08; }
+  #api-warn.ok { background: #f6ffed; border-left: 4px solid #52c41a; color: #389e0d; }
 </style>
 </head>
 <body>
@@ -143,13 +145,17 @@ let detector = null;
 
 /* ========== 初始化检测器 ========== */
 async function initDetector() {
-  // 优先用系统原生 BarcodeDetector
   if ('BarcodeDetector' in window) {
     try {
       const supported = await BarcodeDetector.getSupportedFormats();
+      showApiWarn('✅ 使用系统原生识别，支持格式：' + supported.join(', '));
       detector = new BarcodeDetector({ formats: supported });
       return 'native';
-    } catch(e) {}
+    } catch(e) {
+      showApiWarn('⚠️ 原生 BarcodeDetector 初始化失败：' + e.message + '，降级为 Quagga');
+    }
+  } else {
+    showApiWarn('⚠️ 浏览器不支持 BarcodeDetector，降级为 Quagga（建议用 Safari 17+）');
   }
   return 'fallback';
 }
@@ -161,7 +167,11 @@ async function startScan() {
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
     });
   } catch(e) {
-    showToast('摄像头启动失败：' + e.message); return;
+    const msg = e.name === 'NotAllowedError' ? '请允许摄像头权限后重试' :
+                e.name === 'NotFoundError' ? '未找到摄像头' :
+                '摄像头启动失败：' + e.message;
+    showApiWarn('❌ ' + msg);
+    showToast(msg); return;
   }
 
   const video = document.getElementById('preview');
@@ -322,7 +332,9 @@ function exportExcel() {
 
 function showApiWarn(msg) {
   const el = document.getElementById('api-warn');
-  el.textContent = msg; el.style.display = 'block';
+  el.textContent = msg;
+  el.className = msg.startsWith('✅') ? 'ok' : 'warn';
+  el.style.display = 'block';
 }
 function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function pad(n) { return String(n).padStart(2,'0'); }
