@@ -182,12 +182,17 @@ async function startScan() {
   }
 }
 
-/* ========== 原生 BarcodeDetector 循环 ========== */
+/* ========== 原生 BarcodeDetector 循环（iOS 兼容：先画 canvas 再检测）========== */
 async function loopNative(video) {
+  const offscreen = document.createElement('canvas');
+  const ctx = offscreen.getContext('2d');
   while (videoStream && !paused) {
     try {
-      if (video.readyState >= 2) {
-        const results = await detector.detect(video);
+      if (video.readyState >= 2 && video.videoWidth > 0) {
+        offscreen.width = video.videoWidth;
+        offscreen.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        const results = await detector.detect(offscreen);
         if (results.length > 0 && !paused) {
           const r = results[0];
           showConfirm(r.rawValue, r.format);
@@ -195,7 +200,7 @@ async function loopNative(video) {
         }
       }
     } catch(e) {}
-    await new Promise(r => setTimeout(r, 120));
+    await new Promise(r => setTimeout(r, 150));
   }
 }
 
