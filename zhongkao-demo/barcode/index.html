@@ -182,7 +182,9 @@ async function initEngine(){
 
 /* ---- 开始扫描 ---- */
 async function startScan(){
-  try{ await initEngine(); }catch(e){ return; }
+  notice('warn','⏳ 正在初始化...');
+  try{ await initEngine(); }catch(e){ notice('err','❌ 引擎初始化失败：'+e.message); return; }
+  notice('warn','⏳ 正在启动摄像头...');
   try{
     vs=await navigator.mediaDevices.getUserMedia({
       video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}
