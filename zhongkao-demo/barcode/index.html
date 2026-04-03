@@ -227,18 +227,22 @@ function renderTable() {
 
 function exportExcel() {
   if (barcodeMap.size === 0) { showToast('暂无数据可导出'); return; }
-  const rows = [['序号','条形码','数量']];
+  // HTML table 格式的 .xls，WPS/Excel 直接打开
+  let rows = '<tr><th>序号</th><th>条形码</th><th>数量</th></tr>';
   let i = 1;
-  for (const [code, count] of barcodeMap.entries()) rows.push([i++, code, count]);
-  const csv = rows.map(r => r.map(c => '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
-  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  for (const [code, count] of barcodeMap.entries()) {
+    rows += '<tr><td>'+i+'</td><td>'+esc(code)+'</td><td>'+count+'</td></tr>';
+    i++;
+  }
+  const html = '<html><head><meta charset="utf-8"></head><body><table border="1">'+rows+'</table></body></html>';
+  const blob = new Blob([html], {type: 'application/vnd.ms-excel;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const now = new Date();
   const ts = now.getFullYear()+pad(now.getMonth()+1)+pad(now.getDate())+'_'+pad(now.getHours())+pad(now.getMinutes());
   const a = document.createElement('a');
-  a.href = url; a.download = '条形码统计_'+ts+'.csv'; a.click();
+  a.href = url; a.download = '条形码统计_'+ts+'.xls'; a.click();
   URL.revokeObjectURL(url);
-  showToast('已导出，用 Excel 打开即可');
+  showToast('已导出 .xls，用 WPS 打开即可');
 }
 
 function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
