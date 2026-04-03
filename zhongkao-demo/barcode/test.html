@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>环境检测</title>
+<style>body{font-family:-apple-system,sans-serif;padding:20px;background:#f5f5f5}
+.item{background:#fff;border-radius:10px;padding:14px 16px;margin:10px 0;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.ok{border-left:4px solid #52c41a;color:#389e0d}.err{border-left:4px solid #ff4d4f;color:#cf1322}
+.warn{border-left:4px solid #ffa940;color:#d46b08}
+h2{text-align:center;margin-bottom:16px;font-size:18px}
+#photo{display:none}
+button{margin-top:10px;padding:10px 20px;background:#1677ff;color:#fff;border:none;border-radius:8px;font-size:15px;width:100%}
+</style></head>
+<body>
+<h2>🔍 浏览器环境检测</h2>
+<div class="item" id="r1">⏳ 检测中...</div>
+<div class="item" id="r2">⏳ 检测中...</div>
+<div class="item" id="r3">⏳ 检测中...</div>
+<div class="item" id="r4">⏳ 检测中...</div>
+<div class="item" id="r5">
+  <b>拍照识别测试</b><br>
+  <input type="file" id="photo" accept="image/*" capture="environment">
+  <button onclick="document.getElementById('photo').click()">📷 拍一张条码试试</button>
+  <div id="r5r" style="margin-top:10px"></div>
+</div>
+<script>
+// 1. UA
+var r1=document.getElementById('r1');
+r1.textContent='UA: '+navigator.userAgent;
+r1.className='item';
+
+// 2. BarcodeDetector
+var r2=document.getElementById('r2');
+if('BarcodeDetector' in window){
+  r2.className='item ok';
+  BarcodeDetector.getSupportedFormats().then(function(f){
+    r2.textContent='✅ BarcodeDetector 支持！格式数：'+f.length+'  ('+f.slice(0,5).join(', ')+'...)';
+  }).catch(function(e){r2.className='item err';r2.textContent='❌ BarcodeDetector.getSupportedFormats 失败：'+e;});
+}else{
+  r2.className='item err';
+  r2.textContent='❌ BarcodeDetector 不存在（不支持）';
+}
+
+// 3. getUserMedia
+var r3=document.getElementById('r3');
+if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
+  r3.className='item ok';r3.textContent='✅ getUserMedia 可用';
+}else{r3.className='item err';r3.textContent='❌ getUserMedia 不可用';}
+
+// 4. createObjectURL
+var r4=document.getElementById('r4');
+try{URL.createObjectURL(new Blob(['x']));r4.className='item ok';r4.textContent='✅ Blob/ObjectURL 可用';}
+catch(e){r4.className='item err';r4.textContent='❌ Blob 不可用：'+e;}
+
+// 5. 拍照识别
+document.getElementById('photo').addEventListener('change',function(evt){
+  var file=evt.target.files[0];if(!file)return;
+  var r5r=document.getElementById('r5r');
+  r5r.textContent='⏳ 识别中...';
+  var img=new Image(),url=URL.createObjectURL(file);
+  img.onload=async function(){
+    var cv=document.createElement('canvas');
+    cv.width=img.naturalWidth;cv.height=img.naturalHeight;
+    cv.getContext('2d').drawImage(img,0,0);
+    URL.revokeObjectURL(url);
+    if('BarcodeDetector' in window){
+      try{
+        var d=new BarcodeDetector({formats:await BarcodeDetector.getSupportedFormats()});
+        var res=await d.detect(cv);
+        if(res.length>0){
+          r5r.style.color='#389e0d';
+          r5r.textContent='✅ 识别到：'+res[0].rawValue+' ('+res[0].format+')';
+        }else{
+          r5r.style.color='#d46b08';
+          r5r.textContent='⚠️ 未识别到条码（照片太模糊或格式不支持）';
+        }
+      }catch(e){r5r.style.color='#cf1322';r5r.textContent='❌ 识别出错：'+e;}
+    }else{
+      r5r.style.color='#cf1322';
+      r5r.textContent='❌ 不支持 BarcodeDetector，无法识别';
+    }
+  };
+  img.src=url;
+});
+</script>
+</body></html>
