@@ -400,6 +400,7 @@ function showDetail(rank, encoded) {
   const s = JSON.parse(unescape(encoded));
   document.getElementById('modal-title').textContent = s.name;
   const rows = [
+    ['学校代码', s.code || '-'],
     ['等级', s.grade],
     ['深户录取分', s.score_ac ? s.score_ac + '分' : '-'],
     ['非深录取分', s.score_d ? s.score_d + '分' : '-'],
